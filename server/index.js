@@ -29,8 +29,9 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '..')));
 
 // Setup SQL.js
-const dbFile = path.join(__dirname, 'studyflow.db');
+const dbFile = process.env.VERCEL ? path.join('/tmp', 'studyflow.db') : path.join(__dirname, 'studyflow.db');
 let db = null;
+let dbReady = null;
 
 async function initDb() {
   const SQL = await initSqlJs();
@@ -77,6 +78,15 @@ function saveDb() {
   const buffer = Buffer.from(data);
   fs.writeFileSync(dbFile, buffer);
 }
+
+app.use(async (req, res, next) => {
+  try {
+    if (dbReady) await dbReady;
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 function runQuery(sql, params = []) {
   if (!db) throw new Error('DB not initialized');
@@ -279,10 +289,17 @@ app.post('/api/ai/chat', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-// Start server after DB init
-initDb().then(() => {
-  app.listen(PORT, () => console.log(`StudyFlow server running on http://localhost:${PORT}`));
-}).catch(err => {
+dbReady = initDb().catch(err => {
   console.error('Failed to initialize database:', err);
-  process.exit(1);
+  throw err;
 });
+
+if (!process.env.VERCEL) {
+  dbReady.then(() => {
+    app.listen(PORT, () => console.log(`StudyFlow server running on http://localhost:${PORT}`));
+  }).catch(() => {
+    process.exit(1);
+  });
+}
+
+export default app;
