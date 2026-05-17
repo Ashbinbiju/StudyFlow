@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyFlow | Settings</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="assets/css/styles.css">
+  
+  <style>
+    /* Settings Page Specific overrides */
+    .setting-section {
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    
+    .setting-section h3 {
+      font-size: 1.25rem;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .setting-row:last-child {
+      border-bottom: none;
+    }
+
+    .setting-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .setting-info label {
+      font-weight: 500;
+      font-size: 1rem;
+      color: white;
+    }
+
+    .setting-info span {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .setting-control select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      color: white;
+      font-size: 0.9rem;
+      outline: none;
+      cursor: pointer;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+      transition: all var(--transition-normal);
+    }
+
+    .setting-control select:focus {
+      border-color: var(--accent-blue);
+    }
+
+    @media (max-width: 768px) {
+      .setting-control select {
+        font-size: 0.85rem;
+        padding: 9px 34px 9px 10px;
+      }
+    }
+
+    /* Beautiful toggle switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: rgba(255,255,255,0.1);
+      transition: .4s;
+      border-radius: 24px;
+      border: 1px solid var(--glass-border);
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background: var(--gradient-main);
+    }
+
+    input:focus + .slider {
+      box-shadow: 0 0 1px #2196F3;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-layout has-right-sidebar">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <i data-lucide="brain-circuit"></i>
+        </div>
+        <div class="brand-name">StudyFlow</div>
+      </div>
+      
+      <nav class="nav-menu">
+        <a href="index.html" class="nav-item">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+
+        <a href="video.html" class="nav-item">
+          <i data-lucide="video"></i>
+          <span>Watch & Notes</span>
+        </a>
+        <a href="#" class="nav-item">
+          <i data-lucide="layers"></i>
+          <span>Flashcards</span>
+        </a>
+        <a href="#" class="nav-item">
+          <i data-lucide="refresh-cw"></i>
+          <span>Revision</span>
+        </a>
+        <a href="settings.html" class="nav-item active">
+          <i data-lucide="settings"></i>
+          <span>Settings</span>
+        </a>
+      </nav>
+      
+      <div class="sidebar-footer glass-card">
+        <div class="streak-widget">
+          <div class="streak-info">
+            <h4>Study Streak</h4>
+            <p>12 Days <i data-lucide="flame" class="streak-icon"></i></p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="search-bar">
+          <i data-lucide="search"></i>
+          <input type="text" placeholder="Search settings...">
+        </div>
+      </header>
+      
+      <!-- Content Area -->
+      <div class="dashboard-content">
+        
+        <section class="welcome-section">
+          <h1>Settings</h1>
+          <p>Customize your StudyFlow study platform environment.</p>
+        </section>
+        
+        <div class="settings-content-grid" style="display: grid; grid-template-columns: 1fr; gap: 24px; max-width: 800px;">
+          
+          <!-- Profile Section -->
+          <div class="glass-card setting-section">
+            <h3><i data-lucide="user" style="color: var(--accent-blue);"></i> Profile</h3>
+            
+            <div class="setting-row">
+              <div class="setting-info">
+                <label>Display Name</label>
+                <span>This name will be shown on your dashboard.</span>
+              </div>
+              <div class="setting-control">
+                <input type="text" id="profileNameInput" placeholder="Enter your name" style="background: var(--bg-card); border: 1px solid var(--border); color: white; padding: 8px 12px; border-radius: 8px; font-family: 'Inter', sans-serif;">
+              </div>
+            </div>
+          </div>
+
+          <!-- Preferences Section -->
+          <div class="glass-card setting-section">
+            <h3><i data-lucide="sliders" style="color: var(--accent-blue);"></i> Preferences</h3>
+            
+            <div class="setting-row">
+              <div class="setting-info">
+                <label>Theme</label>
+                <span>Select your preferred app appearance interface.</span>
+              </div>
+              <div class="setting-control">
+                <select id="themePreference">
+                  <option>Dark Mode (Recommended)</option>
+                  <option>Light Mode</option>
+                  <option>System Default</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="setting-row">
+              <div class="setting-info">
+                <label>Default Playback Speed</label>
+                <span>Choose default speed for video lectures.</span>
+              </div>
+              <div class="setting-control">
+                <select id="playbackSpeedPreference">
+                  <option>1.0x (Normal)</option>
+                  <option>1.25x</option>
+                  <option>1.5x</option>
+                  <option>1.75x</option>
+                  <option>2.0x</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <label>Auto-Generate Summaries</label>
+                <span>Automatically synthesize lecture summaries on video completion.</span>
+              </div>
+              <div class="setting-control">
+                <label class="switch">
+                  <input type="checkbox" id="autoSummaryPreference" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <label>Smart Notes Sync</label>
+                <span>Continuously save your timestamped notes to local storage & cloud.</span>
+              </div>
+              <div class="setting-control">
+                <label class="switch">
+                  <input type="checkbox" id="smartSyncPreference" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Subject Management Section -->
+          <div class="glass-card setting-section">
+            <h3><i data-lucide="book-open" style="color: var(--accent-cyan);"></i> Subject Management</h3>
+            
+            <div class="setting-row" style="flex-direction: column; align-items: stretch; gap: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="setting-info">
+                  <label>Manage Subjects</label>
+                  <span>Add or remove your study workspaces.</span>
+                </div>
+              </div>
+              
+              <div class="subject-management-container" style="background: rgba(0,0,0,0.2); border-radius: var(--radius-md); border: 1px solid var(--glass-border); padding: 16px;">
+                <!-- Add new subject inline -->
+                <div class="settings-add-subject-row" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                  <input type="text" id="settingsNewSubjectName" placeholder="New subject name (e.g. History)..." style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 10px 14px; color: white; font-size: 0.9rem; font-family: var(--font-sans); outline: none;">
+                  <button id="settingsAddSubjectBtn" class="btn btn-primary" style="white-space: nowrap; padding: 10px 16px;"><i data-lucide="plus" style="width:16px;height:16px;margin-right:6px;"></i> Add</button>
+                </div>
+                
+                <!-- List of subjects -->
+                <div id="settingsSubjectList" style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto;">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Account Section -->
+          <div class="glass-card setting-section">
+            <h3><i data-lucide="user" style="color: var(--accent-purple);"></i> Account</h3>
+            
+            <div class="setting-row">
+              <div class="setting-info">
+                <label>Study Streak Target</label>
+                <span>Your daily study streak milestone reminder.</span>
+              </div>
+              <div class="setting-control">
+                <select>
+                  <option>7 Days</option>
+                  <option>14 Days</option>
+                  <option>30 Days (Pro)</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="setting-row">
+              <div class="setting-info" style="color: #ef4444;">
+                <label style="color: #ef4444;">Reset Local Database</label>
+                <span>Delete all local study streaks, custom notes, and bookmarks. This action is irreversible.</span>
+              </div>
+              <div class="setting-control">
+                <button class="btn" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">Reset Data</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+    
+    <!-- Right Sidebar -->
+    <aside class="right-sidebar">
+      <div class="glass-card widget" style="text-align: center;">
+        <i data-lucide="info" style="width: 32px; height: 32px; color: var(--accent-cyan); margin-bottom: 12px;"></i>
+        <h3 class="widget-title" style="margin-bottom: 8px;">About StudyFlow</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+          Version 0.9 — Student preview platform.<br>
+          Designed for university preparation and competitive learning environments.
+        </p>
+      </div>
+    </aside>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav">
+      <a href="index.html"><i data-lucide="layout-grid"></i><span>Dashboard</span></a>
+      <a href="video.html"><i data-lucide="video"></i><span>Watch</span></a>
+      <a href="settings.html" class="active"><i data-lucide="settings"></i><span>Settings</span></a>
+    </nav>
+  </div>
+
+  <!-- App script -->
+  <script src="assets/js/app.js"></script>
+  <script>
+    if (window.lucide) lucide.createIcons();
+    
+    // Topbar scroll effect
+    const mainContent = document.querySelector('.main-content');
+    const topbar = document.querySelector('.topbar');
+    
+    mainContent.addEventListener('scroll', () => {
+      if (mainContent.scrollTop > 10) {
+        topbar.classList.add('scrolled');
+      } else {
+        topbar.classList.remove('scrolled');
+      }
+    });
+  </script>
+</body>
+</html>

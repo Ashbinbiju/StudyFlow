@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyFlow | Watch & Notes</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+  <div class="app-layout" id="video-app-layout">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar" id="main-sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <i data-lucide="brain-circuit"></i>
+        </div>
+        <div class="brand-name">StudyFlow</div>
+      </div>
+      
+      <nav class="nav-menu">
+        <a href="index.html" class="nav-item">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+
+        <a href="video.html" class="nav-item active">
+          <i data-lucide="video"></i>
+          <span>Watch & Notes</span>
+        </a>
+        <a href="#" class="nav-item">
+          <i data-lucide="layers"></i>
+          <span>Flashcards</span>
+        </a>
+        <a href="#" class="nav-item">
+          <i data-lucide="refresh-cw"></i>
+          <span>Revision</span>
+        </a>
+        <a href="settings.html" class="nav-item">
+          <i data-lucide="settings"></i>
+          <span>Settings</span>
+        </a>
+      </nav>
+      
+      <button class="btn btn-primary" style="margin-top: 20px; width: 100%;">
+        <i data-lucide="plus"></i> New Note
+      </button>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      
+      <!-- Topbar -->
+      <header class="topbar">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <a href="index.html" class="btn-icon">
+            <i data-lucide="arrow-left"></i>
+          </a>
+          <div class="video-meta-tags" style="margin-bottom: 0; display: flex; align-items: center; gap: 12px;">
+            <span class="badge badge-purple">StudyFlow</span>
+            <span class="video-topbar-title">Select a lecture</span>
+            <div class="subject-select-wrap">
+              <i data-lucide="layers"></i>
+              <select id="subjectSelect" class="subject-select" aria-label="Select subject">
+                <!-- Populated dynamically by app.js -->
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div class="user-actions">
+          <button class="btn" id="focus-btn" style="background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--glass-border);">
+            <i data-lucide="maximize"></i> Focus Mode
+          </button>
+        </div>
+      </header>
+      
+      <!-- Video Layout -->
+      <div class="video-layout">
+        
+        <!-- Video Player Area -->
+        <div class="player-container">
+          <!-- BUG FIX #6: position:relative required for autoplay overlay (position:absolute) -->
+        <div class="video-wrapper" style="position: relative;">
+            <video id="player" style="width: 100%; height: 100%; object-fit: cover;" poster="assets/images/profile.png" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" controls preload="metadata"></video>
+          </div>
+          
+          <div class="video-details" style="padding: 10px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <h1 style="font-size: 1.5rem; margin-bottom: 8px;">Select a lecture to start watching</h1>
+                <p id="videoMetaLine" style="color: var(--text-muted); font-size: 0.95rem;">No lecture selected</p>
+              </div>
+              <div class="video-detail-actions">
+                <button class="btn video-detail-action-btn" id="bookmarkBtn" title="Save bookmark">
+                  <i data-lucide="bookmark"></i> Save
+                </button>
+                <button class="btn video-detail-action-btn" id="bookmarksBtn" title="Show bookmarks">
+                  <i data-lucide="folder"></i> List
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>        <!-- Dual Tab Notes/Lectures Panel -->
+        <aside class="notes-panel glass-card" style="margin-right: -8px; display: flex; flex-direction: column;">
+          
+          <!-- Sidebar Tabs Header -->
+          <div class="sidebar-tabs" style="display: flex; gap: 16px; border-bottom: 1px solid var(--glass-border); padding: 12px 16px 8px; width: 100%; flex-shrink: 0; background: rgba(0,0,0,0.15);">
+            <button id="tabNotesBtn" class="tab-btn active" style="background: none; border: none; color: white; font-weight: 600; cursor: pointer; border-bottom: 2px solid var(--accent-blue); padding-bottom: 8px; font-size: 0.9rem; transition: all 0.2s;">Live Notes</button>
+            <button id="tabLecturesBtn" class="tab-btn" style="background: none; border: none; color: var(--text-muted); font-weight: 500; cursor: pointer; padding-bottom: 8px; font-size: 0.9rem; transition: all 0.2s;">Course Playlist</button>
+          </div>
+          
+          <!-- Tab 1: Live Notes Content -->
+          <div id="notesTabContent" style="display: flex; flex-direction: column;">
+            <div class="notes-header" style="flex-shrink: 0; padding: 12px 16px 8px;">
+              <h3><i data-lucide="edit-3" style="color: var(--accent-blue); width: 16px; height: 16px;"></i> Live Notes</h3>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <input id="searchNotes" type="text" placeholder="Search notes..." style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 6px 10px; border-radius: var(--radius-md); color: white; font-size: 0.8rem; width: 120px;">
+              </div>
+            </div>
+            
+            <div class="notes-list" id="notesList" style="flex: 1; overflow-y: auto; padding: 0 16px 16px;">
+              <!-- Dynamic Notes will be populated by app.js -->
+            </div>
+            
+            <div class="notes-editor" style="flex-shrink: 0; padding: 16px; border-top: 1px solid var(--glass-border);">
+              <textarea id="noteText" placeholder="Take a note... (Markdown supported)" rows="3"></textarea>
+              <div class="editor-actions">
+                <div class="editor-tools">
+                  <button class="floating-note"><i data-lucide="clock" style="width: 16px; height: 16px;"></i> Time</button>
+                  <button onclick="document.getElementById('noteText').value += '**bold**'"><i data-lucide="bold" style="width: 16px; height: 16px;"></i></button>
+                  <button onclick="document.getElementById('noteText').value += '*italic*'"><i data-lucide="italic" style="width: 16px; height: 16px;"></i></button>
+                </div>
+                <button id="addNoteBtn" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.85rem;">Save Note</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 2: Course Playlist Content -->
+          <div id="lecturesTabContent" style="display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 16px; gap: 12px;">
+            <!-- Mapped dynamically by app.js -->
+          </div>
+
+        </aside>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Floating AI Assistant -->
+  <div class="ai-fab" id="ai-toggle">
+    <i data-lucide="sparkles"></i>
+  </div>
+  
+  <div class="ai-popup glass-card" id="ai-popup" style="display: none; position: fixed; bottom: 100px; right: 32px; width: 350px; z-index: 99;">
+    <div style="padding: 16px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2);">
+      <h3 style="font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="sparkles" style="color: var(--accent-purple); width: 18px; height: 18px;"></i> 
+        Study AI Assistant
+      </h3>
+      <button class="btn-icon" id="close-ai" style="width: 24px; height: 24px;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+    </div>
+    
+    <div id="aiMessages" style="padding: 16px; height: 270px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
+      <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px 12px 12px 0; font-size: 0.9rem; align-self: flex-start; max-width: 88%; line-height: 1.45;">
+        I can use the current YouTube link, lecture title, subject, and timestamp. Notes are optional.
+      </div>
+      
+      <div class="ai-quick-actions" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;">
+        <button class="btn ai-chip" id="explainSimply" data-ai-prompt="Explain the current lecture topic simply using the YouTube URL, title, subject, and timestamp.">Explain simply</button>
+        <button class="btn ai-chip" data-ai-prompt="Use the current YouTube URL, title, and timestamp to explain what I should focus on now.">Current video</button>
+        <button class="btn ai-chip" id="genSummary" data-ai-prompt="Summarize this lecture using the current YouTube URL, title, subject, and timestamp.">Summarize</button>
+        <button class="btn ai-chip" id="genFlashcards" data-ai-prompt="Create flashcards for this lecture using the current YouTube URL, title, subject, and timestamp.">Flashcards</button>
+        <button class="btn ai-chip" id="genQuiz" data-ai-prompt="Quiz me on this lecture using the current YouTube URL, title, subject, and timestamp.">Quiz me</button>
+        <button class="btn ai-chip" data-ai-prompt="Make a 20-minute revision plan for this lecture using the current YouTube URL, title, subject, and timestamp.">Study plan</button>
+        <button class="btn ai-chip" data-ai-prompt="List what I should focus on next in this lecture using the current YouTube URL, title, subject, and timestamp.">Focus next</button>
+      </div>
+    </div>
+    
+    <div style="padding: 12px; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.2);">
+      <div style="position: relative;">
+        <input type="text" id="aiChatInput" placeholder="Ask anything about the video..." style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 10px 40px 10px 12px; border-radius: 20px; color: white; font-size: 0.9rem;">
+        <button id="aiChatSend" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; color: var(--accent-blue); cursor: pointer;"><i data-lucide="send" style="width: 16px; height: 16px;"></i></button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Mobile Navigation -->
+  <nav class="mobile-nav">
+    <a href="index.html"><i data-lucide="layout-grid"></i><span>Dashboard</span></a>
+    <a href="video.html" class="active"><i data-lucide="video"></i><span>Watch</span></a>
+    <a href="settings.html"><i data-lucide="settings"></i><span>Settings</span></a>
+  </nav>
+
+  <!-- AI Modal (dynamically manipulated by app.js) -->
+  <!-- BUG FIX #5: needs display:flex to center content properly -->
+  <div class="modal" id="aiModal" style="display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(5, 7, 14, 0.8); backdrop-filter: blur(8px); align-items: center; justify-content: center;">
+    <div class="modal-content glass-card" style="width: 90%; max-width: 500px; padding: 28px; position: relative;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 12px;">
+        <h3 id="aiModalTitle">AI Assistant</h3>
+        <button class="btn-icon" id="closeAiModal" style="width: 28px; height: 28px;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+      </div>
+      <div class="modal-body" id="aiModalBody" style="color: #d1d5db; font-size: 1rem; line-height: 1.6; max-height: 350px; overflow-y: auto;">
+        <!-- Content will be injected by app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="assets/js/app.js"></script>
+  <script>
+    if (window.lucide) lucide.createIcons();
+    
+    // Focus Mode Toggle
+    const focusBtn = document.getElementById('focus-btn');
+    const layout = document.getElementById('video-app-layout');
+    const sidebar = document.getElementById('main-sidebar');
+    let isFocusMode = false;
+    
+    focusBtn.addEventListener('click', () => {
+      isFocusMode = !isFocusMode;
+      if (isFocusMode) {
+        layout.style.gridTemplateColumns = '1fr';
+        sidebar.style.display = 'none';
+        focusBtn.innerHTML = '<i data-lucide="minimize"></i> Exit Focus';
+        focusBtn.style.background = 'rgba(99, 102, 241, 0.2)';
+        focusBtn.style.borderColor = 'rgba(99, 102, 241, 0.5)';
+      } else {
+        layout.style.gridTemplateColumns = '260px 1fr';
+        sidebar.style.display = 'flex';
+        focusBtn.innerHTML = '<i data-lucide="maximize"></i> Focus Mode';
+        focusBtn.style.background = 'rgba(255,255,255,0.05)';
+        focusBtn.style.borderColor = 'var(--glass-border)';
+      }
+      if (window.lucide) lucide.createIcons();
+    });
+    
+    // AI Assistant Toggle
+    const aiToggle = document.getElementById('ai-toggle');
+    const aiPopup = document.getElementById('ai-popup');
+    const closeAi = document.getElementById('close-ai');
+    
+    aiToggle.addEventListener('click', () => {
+      aiPopup.style.display = aiPopup.style.display === 'none' ? 'block' : 'none';
+    });
+    
+    closeAi.addEventListener('click', () => {
+      aiPopup.style.display = 'none';
+    });
+    
+    // Auto-scroll notes to bottom on load to show latest
+    const notesContainer = document.getElementById('notesList');
+    if (notesContainer) {
+      notesContainer.scrollTop = notesContainer.scrollHeight;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyFlow | Dashboard</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+  <div class="app-layout has-right-sidebar">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <i data-lucide="brain-circuit"></i>
+        </div>
+        <div class="brand-name">StudyFlow</div>
+      </div>
+      
+      <nav class="nav-menu">
+        <a href="index.html" class="nav-item active">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+
+        <a href="video.html" class="nav-item">
+          <i data-lucide="video"></i>
+          <span>Watch & Notes</span>
+        </a>
+        <a href="#" class="nav-item">
+          <i data-lucide="layers"></i>
+          <span>Flashcards</span>
+        </a>
+        <a href="#" class="nav-item">
+          <i data-lucide="refresh-cw"></i>
+          <span>Revision</span>
+        </a>
+        <a href="settings.html" class="nav-item">
+          <i data-lucide="settings"></i>
+          <span>Settings</span>
+        </a>
+      </nav>
+      
+      <div class="sidebar-footer glass-card">
+        <div class="streak-widget">
+          <div class="streak-info">
+            <h4>Study Streak</h4>
+            <p>12 Days <i data-lucide="flame" class="streak-icon"></i></p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="search-bar">
+          <i data-lucide="search"></i>
+          <input type="text" placeholder="Search videos, notes, subjects, or ask AI...">
+        </div>
+      </header>
+      
+      <!-- Dashboard Content -->
+      <div class="dashboard-content">
+        
+        <section class="welcome-section">
+          <h1 id="dashboardWelcomeName">Welcome back, <span class="text-gradient">Student</span></h1>
+          <p>Ready to continue your learning journey?</p>
+        </section>
+        
+        <!-- Continue Watching -->
+        <section class="continue-watching">
+          <div class="section-header">
+            <h2 class="section-title">
+              <i data-lucide="play-circle" style="color: var(--accent-blue);"></i> 
+              Continue Watching
+            </h2>
+            <button id="dashboardViewAllBtn" type="button" class="btn btn-primary" style="background: rgba(255,255,255,0.05); color: white; box-shadow: none;">View All</button>
+          </div>
+          
+          <div class="video-grid" id="dashboardContinueWatching">
+            
+            <a href="video.html" class="glass-card video-card">
+              <div class="thumbnail">
+                <img src="assets/images/thumb1.png" alt="Quantum Mechanics">
+                <div class="play-overlay">
+                  <div class="play-icon"><i data-lucide="play" fill="currentColor"></i></div>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 65%;"></div>
+                </div>
+              </div>
+              <div class="video-info">
+                <span class="badge badge-purple" style="margin-bottom: 8px;">Physics</span>
+                <h3>Quantum Mechanics — Lecture 4</h3>
+                <p>12:34 / 45:00 • 3 notes taken</p>
+              </div>
+            </a>
+            
+            <a href="video.html" class="glass-card video-card">
+              <div class="thumbnail">
+                <img src="assets/images/thumb2.png" alt="React Hooks">
+                <div class="play-overlay">
+                  <div class="play-icon"><i data-lucide="play" fill="currentColor"></i></div>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 25%;"></div>
+                </div>
+              </div>
+              <div class="video-info">
+                <span class="badge badge-blue" style="margin-bottom: 8px;">Programming</span>
+                <h3>React Hooks in Depth</h3>
+                <p>22:10 / 1:15:00 • 7 notes taken</p>
+              </div>
+            </a>
+            
+          </div>
+        </section>
+        
+
+        
+      </div>
+    </main>
+    
+    <!-- Right Sidebar -->
+    <aside class="right-sidebar">
+      
+      <!-- Stats Widget -->
+      <div class="glass-card widget">
+        <div class="widget-header">
+          <h3 class="widget-title">Daily Study Hours <span id="dashboardStudyHours" style="color: var(--accent-blue); font-size: 0.9rem; margin-left: 8px;">0.0 hrs</span></h3>
+          <i data-lucide="bar-chart-2" style="color: var(--text-muted);"></i>
+        </div>
+        <div class="chart-mockup">
+          <div class="chart-bar" style="height: 30%;"></div>
+          <div class="chart-bar" style="height: 50%;"></div>
+          <div class="chart-bar" style="height: 40%;"></div>
+          <div class="chart-bar" style="height: 80%;"></div>
+          <div class="chart-bar active" style="height: 60%;"></div>
+          <div class="chart-bar" style="height: 90%;"></div>
+          <div class="chart-bar" style="height: 20%;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.8rem; color: var(--text-muted);">
+          <span>Mon</span>
+          <span>Sun</span>
+        </div>
+      </div>
+      
+
+      
+      <!-- Recent Notes -->
+      <div class="glass-card widget">
+        <div class="widget-header">
+          <h3 class="widget-title">Recent Notes</h3>
+          <button class="btn-icon" style="width: 28px; height: 28px;"><i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i></button>
+        </div>
+        <div id="dashboardRecentNotes">
+          <div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 20px 0;">No notes found.</div>
+        </div>
+      </div>
+      
+    </aside>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav">
+      <a href="index.html" class="active"><i data-lucide="layout-grid"></i><span>Dashboard</span></a>
+      <a href="video.html"><i data-lucide="video"></i><span>Watch</span></a>
+      <a href="settings.html"><i data-lucide="settings"></i><span>Settings</span></a>
+    </nav>
+  </div>
+
+  <script src="assets/js/app.js"></script>
+  <script>
+    if (window.lucide) lucide.createIcons();
+    
+    // Topbar scroll effect
+    const mainContent = document.querySelector('.main-content');
+    const topbar = document.querySelector('.topbar');
+    
+    mainContent.addEventListener('scroll', () => {
+      if (mainContent.scrollTop > 10) {
+        topbar.classList.add('scrolled');
+      } else {
+        topbar.classList.remove('scrolled');
+      }
+    });
+  </script>
+</body>
+</html>
