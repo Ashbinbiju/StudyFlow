@@ -1271,26 +1271,19 @@
     if(aiModal) aiModal.style.display = 'none';
   }
 
-  // --- Google AI Studio (Gemini) Integration ---
-  const GEMINI_API_KEY = "AIzaSyAh1xaEtpLw7gmW8d1qq_bWLlCFbJ7BvaU";
-
   async function callAI(systemPrompt, userPrompt) {
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ parts: [{ text: userPrompt }] }],
-          generationConfig: { temperature: 0.7 }
+          systemPrompt,
+          userPrompt
         })
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error.message);
-      if (data.candidates && data.candidates[0].content.parts[0].text) {
-        return data.candidates[0].content.parts[0].text;
-      }
-      return "No response generated.";
+      return data.text || null;
     } catch (e) {
       console.error("Gemini API Error:", e);
       return null;

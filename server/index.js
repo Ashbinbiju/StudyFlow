@@ -7,6 +7,19 @@ import initSqlJs from 'sql.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const envFile = path.join(__dirname, '.env');
+
+if (fs.existsSync(envFile)) {
+  const lines = fs.readFileSync(envFile, 'utf8').split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) continue;
+    const [key, ...valueParts] = trimmed.split('=');
+    if (!process.env[key]) {
+      process.env[key] = valueParts.join('=').replace(/^["']|["']$/g, '');
+    }
+  }
+}
 
 const app = express();
 app.use(cors());
@@ -229,6 +242,39 @@ app.post('/api/ai/summary', (req, res) => {
   if (!notesRows.length) return res.json({ summary: 'No notes available.' });
   const lines = notesRows.slice(0, 10).map(n => `- [${new Date(n.time * 1000).toISOString().substr(14, 5)}] ${n.text}`);
   res.json({ summary: lines.join('\n') });
+});
+
+app.post('/api/ai/chat', async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return res.status(503).json({ error: { message: 'AI is not configured on the server.' } });
+  }
+
+  const { systemPrompt, userPrompt } = req.body || {};
+  if (!userPrompt) {
+    return res.status(400).json({ error: { message: 'userPrompt required' } });
+  }
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt || 'You are a helpful study assistant.' }] },
+        contents: [{ parts: [{ text: userPrompt }] }],
+        generationConfig: { temperature: 0.7 }
+      })
+    });
+    const data = await response.json();
+    if (!response.ok || data.error) {
+      return res.status(response.status || 502).json({ error: data.error || { message: 'AI request failed' } });
+    }
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    res.json({ text });
+  } catch (error) {
+    console.error('AI proxy error:', error);
+    res.status(502).json({ error: { message: 'AI service unavailable' } });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
