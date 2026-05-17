@@ -28,13 +28,18 @@ app.use(express.json());
 // Serve static frontend
 app.use(express.static(path.join(__dirname, '..')));
 
+// Simple ping should not wait on database startup.
+app.get('/api/ping', (req, res) => res.json({ ok: true }));
+
 // Setup SQL.js
 const dbFile = process.env.VERCEL ? path.join('/tmp', 'studyflow.db') : path.join(__dirname, 'studyflow.db');
 let db = null;
 let dbReady = null;
 
 async function initDb() {
-  const SQL = await initSqlJs();
+  const SQL = await initSqlJs({
+    locateFile: file => path.join(__dirname, 'node_modules', 'sql.js', 'dist', file)
+  });
   
   // Try to load existing DB
   if (fs.existsSync(dbFile)) {
@@ -121,9 +126,6 @@ function getOne(sql, params = []) {
   const rows = getAll(sql, params);
   return rows.length > 0 ? rows[0] : null;
 }
-
-// Simple ping
-app.get('/api/ping', (req, res) => res.json({ ok: true }));
 
 // Subjects
 app.get('/api/subjects', (req, res) => {
