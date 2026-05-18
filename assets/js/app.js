@@ -399,6 +399,24 @@
     youtubeCurrentTime = 0;
   }
 
+  async function activateFirstLectureForSubject(sid) {
+    if (!sid) return false;
+    const lectures = (await loadLectures(sid)).filter(l => l && l.youtubeId);
+    if (lectures.length === 0) return false;
+
+    const first = lectures[0];
+    activeLecture = normalizeLecture({
+      subjectId: sid,
+      id: first.id,
+      title: first.title,
+      youtubeId: first.youtubeId,
+      duration: first.duration
+    });
+    localStorage.setItem('studyflow:activeLecture', JSON.stringify(activeLecture));
+    isYouTube = Boolean(activeLecture.youtubeId);
+    return true;
+  }
+
   async function reconcileWatchLectureState(subjects) {
     const onWatchPage = Boolean(document.querySelector('.video-wrapper') || subjectSelect);
     if (!onWatchPage) return;
@@ -438,6 +456,10 @@
       if (!stillExists) {
         clearActiveLectureState();
       }
+    }
+
+    if (!activeLecture && current) {
+      await activateFirstLectureForSubject(current);
     }
 
     isYouTube = Boolean(activeLecture?.youtubeId);
