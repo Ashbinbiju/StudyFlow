@@ -275,9 +275,9 @@
     if(serverAvailable){
       const res = await fetch('/api/subjects');
       if(res.ok) return await res.json();
-      return defaultSubjects();
+      return [];
     }
-    try{ return JSON.parse(localStorage.getItem(SUBJECTS_KEY)) || defaultSubjects() }catch(e){return defaultSubjects()}
+    try{ return JSON.parse(localStorage.getItem(SUBJECTS_KEY)) || [] }catch(e){return []}
   }
   async function saveSubjects(list){
     localStorage.setItem(SUBJECTS_KEY, JSON.stringify(list));
@@ -287,7 +287,7 @@
       return;
     }
   }
-  function getCurrentSubjectId(){ return localStorage.getItem(CURRENT_SUBJECT_KEY) || defaultSubjects()[0].id }
+  function getCurrentSubjectId(){ return localStorage.getItem(CURRENT_SUBJECT_KEY) || null }
   function setCurrentSubjectId(id){ localStorage.setItem(CURRENT_SUBJECT_KEY, id); }
 
   const PROFILE_KEY = 'studyflow:profile';
@@ -359,6 +359,43 @@
     const played = loadPlayedLectures().filter(x => !(x.id === entry.id && x.subjectId === entry.subjectId));
     played.unshift(entry);
     localStorage.setItem(DASHBOARD_PLAYED_KEY, JSON.stringify(played.slice(0, 24)));
+  }
+
+  function cleanupSubjectReferences(sid, remainingSubjects = []) {
+    if (!sid) return;
+    try {
+      localStorage.removeItem(LECTURES_KEY + sid);
+      localStorage.removeItem(`studyflow:emoji:${sid}`);
+
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (
+          key === `studyflow:notes:${sid}` ||
+          key === `studyflow:bookmarks:${sid}` ||
+          key?.startsWith(`studyflow:notes:${sid}:`) ||
+          key?.startsWith(`studyflow:bookmarks:${sid}:`)
+        ) {
+          localStorage.removeItem(key);
+        }
+      }
+
+      const played = loadPlayedLectures().filter(x => x.subjectId !== sid);
+      localStorage.setItem(DASHBOARD_PLAYED_KEY, JSON.stringify(played));
+
+      const current = localStorage.getItem(CURRENT_SUBJECT_KEY);
+      if (current === sid) {
+        if (remainingSubjects.length) {
+          localStorage.setItem(CURRENT_SUBJECT_KEY, remainingSubjects[0].id);
+        } else {
+          localStorage.removeItem(CURRENT_SUBJECT_KEY);
+        }
+      }
+
+      const active = readJson('studyflow:activeLecture', null);
+      if (active?.subjectId === sid) {
+        localStorage.removeItem('studyflow:activeLecture');
+      }
+    } catch (_) {}
   }
 
   function notesKey(){ const sid = getCurrentSubjectId() || 'global'; return `studyflow:notes:${sid}:${videoId}` }
@@ -784,7 +821,7 @@
         if (serverAvailable) await fetch(`/api/subjects/${sid}`, { method: 'DELETE' });
         const remaining = (await loadSubjects()).filter(x => x.id !== sid);
         await saveSubjects(remaining);
-        try { localStorage.removeItem(`studyflow:notes:${sid}:${videoId}`); localStorage.removeItem(LECTURES_KEY + sid); } catch(_) {}
+        cleanupSubjectReferences(sid, remaining);
         if (_activeSubjectId === sid) {
           _activeSubjectId = remaining.length > 0 ? remaining[0].id : null;
           if (_activeSubjectId) setCurrentSubjectId(_activeSubjectId);
@@ -1682,7 +1719,7 @@ Request saved: ${task}`;
         if (serverAvailable) await fetch(`/api/subjects/${sid}`, { method: 'DELETE' });
         const remaining = (await loadSubjects()).filter(x => x.id !== sid);
         await saveSubjects(remaining);
-        try { localStorage.removeItem(`studyflow:notes:${sid}:${videoId}`); localStorage.removeItem(LECTURES_KEY + sid); } catch(_) {}
+        cleanupSubjectReferences(sid, remaining);
         
         if (_activeSubjectId === sid) {
           _activeSubjectId = remaining.length > 0 ? remaining[0].id : null;
@@ -1758,15 +1795,21 @@ Request saved: ${task}`;
     if (!continueGrid) return;
     
     const subs = await loadSubjects();
+    const subjectIds = new Set(subs.map(s => s.id));
+    const playedLectures = loadPlayedLectures();
+    const validPlayedLectures = playedLectures.filter(l => subjectIds.has(l.subjectId));
+    if (validPlayedLectures.length !== playedLectures.length) {
+      localStorage.setItem(DASHBOARD_PLAYED_KEY, JSON.stringify(validPlayedLectures));
+    }
     
     if (continueGrid) {
       continueGrid.innerHTML = '';
       
       let recentLectures = [];
       if (dashboardShowAllLectures) {
-        recentLectures = loadPlayedLectures();
+        recentLectures = validPlayedLectures;
       } else {
-        recentLectures = loadPlayedLectures().slice(0, 2);
+        recentLectures = validPlayedLectures.slice(0, 2);
       }
 
       const visibleLectures = dashboardShowAllLectures ? recentLectures : recentLectures.slice(0, 2);

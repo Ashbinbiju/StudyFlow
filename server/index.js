@@ -129,20 +129,7 @@ function getOne(sql, params = []) {
 
 // Subjects
 app.get('/api/subjects', (req, res) => {
-  let rows = getAll('SELECT id, name FROM subjects ORDER BY name');
-  if (rows.length === 0) {
-    // Seed defaults
-    const defaults = [
-      ['physics', 'Physics'],
-      ['maths', 'Maths'],
-      ['chemistry', 'Chemistry'],
-      ['programming', 'Programming']
-    ];
-    defaults.forEach(([id, name]) => {
-      runQuery('INSERT OR IGNORE INTO subjects (id, name) VALUES (?, ?)', [id, name]);
-    });
-    rows = getAll('SELECT id, name FROM subjects ORDER BY name');
-  }
+  const rows = getAll('SELECT id, name FROM subjects ORDER BY name');
   res.json(rows);
 });
 
