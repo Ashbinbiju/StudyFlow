@@ -297,6 +297,32 @@
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
     saveSetting('profile', p);
   }
+  function localDateKey(date = new Date()) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  function markStudyActivity(profile) {
+    const p = profile || loadProfile();
+    const days = Array.isArray(p.studyDays) ? p.studyDays : [];
+    const today = localDateKey();
+    if (!days.includes(today)) {
+      days.push(today);
+    }
+    p.studyDays = days.slice(-90);
+    return p;
+  }
+  function calculateStudyStreak(profile) {
+    const days = new Set(Array.isArray(profile?.studyDays) ? profile.studyDays : []);
+    let streak = 0;
+    const cursor = new Date();
+    while (days.has(localDateKey(cursor))) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return streak;
+  }
   function loadSettings() {
     try {
       return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
@@ -1742,6 +1768,12 @@ Request saved: ${task}`;
       studyHoursEl.textContent = `${hours} hrs`;
     }
 
+    const streakEl = document.getElementById('dashboardStudyStreak');
+    if (streakEl) {
+      const streak = calculateStudyStreak(loadProfile());
+      streakEl.textContent = `${streak} ${streak === 1 ? 'Day' : 'Days'}`;
+    }
+
     // 3. Render Recent Notes
     const recentNotesContainer = document.getElementById('dashboardRecentNotes');
     if (recentNotesContainer) {
@@ -1924,7 +1956,7 @@ Request saved: ${task}`;
         isPlaying = true;
       }
       if (isPlaying) {
-        const p = loadProfile();
+        const p = markStudyActivity(loadProfile());
         p.studySeconds = (p.studySeconds || 0) + 5;
         saveProfile(p);
       }
