@@ -424,6 +424,23 @@
     }
   }
 
+  function lectureHistoryKey(lecture) {
+    if (!lecture?.subjectId) return null;
+    const lectureId = lecture.youtubeId || lecture.id;
+    if (!lectureId) return null;
+    return `${lecture.subjectId}:${lectureId}`;
+  }
+
+  function dedupePlayedLectures(lectures) {
+    const seen = new Set();
+    return (lectures || []).filter(lecture => {
+      const key = lectureHistoryKey(lecture);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
   function recordPlayedLecture(lecture) {
     if (!lecture || !lecture.id || !lecture.subjectId) return;
     const entry = {
@@ -433,9 +450,10 @@
       youtubeId: lecture.youtubeId,
       duration: lecture.duration
     };
-    const played = loadPlayedLectures().filter(x => !(x.id === entry.id && x.subjectId === entry.subjectId));
+    const entryKey = lectureHistoryKey(entry);
+    const played = loadPlayedLectures().filter(x => lectureHistoryKey(x) !== entryKey);
     played.unshift(entry);
-    localStorage.setItem(DASHBOARD_PLAYED_KEY, JSON.stringify(played.slice(0, 24)));
+    localStorage.setItem(DASHBOARD_PLAYED_KEY, JSON.stringify(dedupePlayedLectures(played).slice(0, 24)));
   }
 
   function cleanupSubjectReferences(sid, remainingSubjects = []) {
@@ -1882,7 +1900,7 @@ Request saved: ${task}`;
     const subs = await loadSubjects();
     const subjectIds = new Set(subs.map(s => s.id));
     const playedLectures = loadPlayedLectures();
-    const validPlayedLectures = playedLectures.filter(l => subjectIds.has(l.subjectId));
+    const validPlayedLectures = dedupePlayedLectures(playedLectures.filter(l => subjectIds.has(l.subjectId)));
     if (validPlayedLectures.length !== playedLectures.length) {
       localStorage.setItem(DASHBOARD_PLAYED_KEY, JSON.stringify(validPlayedLectures));
     }
