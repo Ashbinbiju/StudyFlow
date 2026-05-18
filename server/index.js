@@ -41,6 +41,14 @@ function decodeXmlText(value = '') {
     .replace(/&#39;/g, "'");
 }
 
+function decodeJsonString(value = '') {
+  try {
+    return JSON.parse(`"${String(value).replace(/"/g, '\\"')}"`);
+  } catch (_) {
+    return String(value).replace(/\\u0026/g, '&').replace(/\\"/g, '"');
+  }
+}
+
 function parseYouTubeFeed(xml) {
   const entries = String(xml || '').match(/<entry[\s\S]*?<\/entry>/g) || [];
   return entries.map((entry, index) => {
@@ -56,6 +64,39 @@ function parseYouTubeFeed(xml) {
   }).filter(Boolean);
 }
 
+function parseYouTubePlaylistPage(html) {
+  const chunks = String(html || '').split('"playlistVideoRenderer":{').slice(1);
+  const seen = new Set();
+  const lectures = [];
+
+  for (const chunk of chunks) {
+    const videoId = chunk.match(/"videoId":"([A-Za-z0-9_-]{11})"/)?.[1];
+    if (!videoId || seen.has(videoId)) continue;
+
+    const rawTitle =
+      chunk.match(/"title":\{"runs":\[\{"text":"((?:\\.|[^"\\])*)"/)?.[1] ||
+      chunk.match(/"title":\{"simpleText":"((?:\\.|[^"\\])*)"/)?.[1] ||
+      `Lecture ${lectures.length + 1}`;
+    const title = decodeJsonString(rawTitle).trim();
+    if (!title || /^(deleted|private) video$/i.test(title)) continue;
+
+    const rawDuration =
+      chunk.match(/"lengthText":\{"simpleText":"([^"]+)"/)?.[1] ||
+      chunk.match(/"lengthText":[\s\S]*?"simpleText":"([^"]+)"/)?.[1] ||
+      '--:--';
+
+    seen.add(videoId);
+    lectures.push({
+      id: `yt-${videoId}-${Date.now()}-${lectures.length}`,
+      title,
+      youtubeId: videoId,
+      duration: decodeJsonString(rawDuration)
+    });
+  }
+
+  return lectures;
+}
+
 app.get('/api/youtube/playlist', async (req, res) => {
   const playlistId = String(req.query.playlistId || '').trim();
   if (!/^[A-Za-z0-9_-]+$/.test(playlistId)) {
@@ -63,17 +104,30 @@ app.get('/api/youtube/playlist', async (req, res) => {
   }
 
   try {
+    let lectures = [];
     const response = await fetch(`https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(playlistId)}`, {
       headers: {
         'User-Agent': 'StudyFlow/1.0 (+https://rcstudyflow.vercel.app)'
       }
     });
     const feedText = await response.text();
-    if (!response.ok) {
-      return res.status(response.status).json({ error: 'YouTube playlist feed request failed' });
+    if (response.ok) {
+      lectures = parseYouTubeFeed(feedText);
     }
 
-    const lectures = parseYouTubeFeed(feedText);
+    if (!lectures.length) {
+      const pageResponse = await fetch(`https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+          'Accept-Language': 'en-US,en;q=0.9'
+        }
+      });
+      const pageHtml = await pageResponse.text();
+      if (pageResponse.ok) {
+        lectures = parseYouTubePlaylistPage(pageHtml);
+      }
+    }
+
     if (!lectures.length) {
       return res.status(404).json({ error: 'No public videos found in this playlist' });
     }
