@@ -525,20 +525,8 @@
     const sidebarList = document.getElementById('lecturesTabContent');
     if (!sidebarList) return;
     
-    let sid = activeLecture ? activeLecture.subjectId : getCurrentSubjectId();
+    let sid = getCurrentSubjectId() || activeLecture?.subjectId;
     let lectures = await loadLectures(sid);
-    if (!lectures.length) {
-      const subjects = await loadSubjects();
-      for (const subject of subjects) {
-        const subjectLectures = await loadLectures(subject.id);
-        if (subjectLectures.length) {
-          sid = subject.id;
-          lectures = subjectLectures;
-          setCurrentSubjectId(sid);
-          break;
-        }
-      }
-    }
     sidebarList.innerHTML = '';
     
     if (lectures.length === 0) {
@@ -710,7 +698,7 @@
     subjectSelect.onchange = async (e) => {
       const newSid = e.target.value;
       setCurrentSubjectId(newSid);
-      const lectures = await loadLectures(newSid);
+      const lectures = (await loadLectures(newSid)).filter(l => l && l.youtubeId);
       if (lectures.length > 0) {
         const firstL = lectures[0];
         localStorage.setItem('studyflow:activeLecture', JSON.stringify({
@@ -729,6 +717,8 @@
         });
       } else {
         localStorage.removeItem('studyflow:activeLecture');
+        const played = loadPlayedLectures().filter(x => x.subjectId !== newSid);
+        localStorage.setItem(DASHBOARD_PLAYED_KEY, JSON.stringify(played));
       }
       window.location.reload();
     };
@@ -1864,23 +1854,20 @@ Request saved: ${task}`;
   await checkServer();
   await hydrateSettingsFromServer();
   initSettingsControls();
-  if (activeLecture) {
-    recordPlayedLecture(activeLecture);
-  }
-  if (!activeLecture && document.querySelector('.video-wrapper')) {
-    const subjectIds = [getCurrentSubjectId(), ...(await loadSubjects()).map(s => s.id)]
-      .filter((id, index, arr) => id && arr.indexOf(id) === index);
-    for (const sid of subjectIds) {
-      const lectures = await loadLectures(sid);
-      const firstLecture = lectures.find(l => l && l.youtubeId);
-      if (firstLecture) {
-        activeLecture = { subjectId: sid, ...firstLecture };
-        localStorage.setItem('studyflow:activeLecture', JSON.stringify(activeLecture));
-        localStorage.setItem('studyflow:currentSubject', sid);
+  if (activeLecture?.subjectId) {
+    const subjects = await loadSubjects();
+    if (!subjects.some(s => s.id === activeLecture.subjectId)) {
+      localStorage.removeItem('studyflow:activeLecture');
+      activeLecture = null;
+      isYouTube = false;
+      if (document.querySelector('.video-wrapper')) {
         window.location.reload();
         return;
       }
     }
+  }
+  if (activeLecture) {
+    recordPlayedLecture(activeLecture);
   }
   initSubjectPanelDelegation(); // attach delegated subject delete/select handler BEFORE rendering
   await renderSubjectSelect();
