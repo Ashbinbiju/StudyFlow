@@ -936,6 +936,20 @@ body:not(.dashboard-ready) #dashboardContinueWatching .video-card {
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
 }
 
+.youtube-resume-badge {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 2;
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: white;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .youtube-open-link {
   display: none;
 }

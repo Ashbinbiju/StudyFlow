@@ -40,6 +40,43 @@
   let isYouTube = activeLecture && activeLecture.youtubeId;
   let youtubeCurrentTime = 0;
   let youtubePollTimer = null;
+  let progressSaveTimer = null;
+
+  function playbackProgressKey() {
+    if (!activeLecture) return null;
+    const sid = activeLecture.subjectId || getCurrentSubjectId() || 'global';
+    return `studyflow:progress:${sid}:${getActiveVideoId()}`;
+  }
+
+  function getSavedPlaybackTime() {
+    const key = playbackProgressKey();
+    if (!key) return 0;
+    try {
+      const saved = JSON.parse(localStorage.getItem(key) || '{}');
+      const time = Number(saved.time || 0);
+      return Number.isFinite(time) ? Math.max(0, time) : 0;
+    } catch (_) {
+      localStorage.removeItem(key);
+      return 0;
+    }
+  }
+
+  function savePlaybackProgress(time = getCurrentPlaybackTime()) {
+    const key = playbackProgressKey();
+    const t = Math.floor(Number(time) || 0);
+    if (!key || t < 3) return;
+    localStorage.setItem(key, JSON.stringify({ time: t, updatedAt: Date.now() }));
+  }
+
+  function clearPlaybackProgress() {
+    const key = playbackProgressKey();
+    if (key) localStorage.removeItem(key);
+  }
+
+  function startProgressSaving() {
+    clearInterval(progressSaveTimer);
+    progressSaveTimer = setInterval(() => savePlaybackProgress(), 3000);
+  }
 
   function getCurrentPlaybackTime() {
     if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
@@ -77,12 +114,21 @@
       ytPlayer = new YT.Player(playerElementId, {
         events: {
           onReady: () => {
+            const resumeAt = getSavedPlaybackTime();
+            if (resumeAt > 3 && typeof ytPlayer.seekTo === 'function') {
+              youtubeCurrentTime = resumeAt;
+              ytPlayer.seekTo(resumeAt, true);
+            }
             clearInterval(youtubePollTimer);
-            youtubePollTimer = setInterval(() => getCurrentPlaybackTime(), 500);
+            youtubePollTimer = setInterval(() => {
+              getCurrentPlaybackTime();
+            }, 500);
+            startProgressSaving();
           },
           onStateChange: event => {
             getCurrentPlaybackTime();
             if (event.data === YT.PlayerState.ENDED) {
+              clearPlaybackProgress();
               triggerNextLectureTransition();
             }
           }
@@ -138,22 +184,26 @@
       const videoId = encodeURIComponent(rawVideoId);
       const embedOrigin = encodeURIComponent(window.location.origin);
       const title = escapeHtml(activeLecture.title || 'YouTube lecture');
+      const resumeAt = getSavedPlaybackTime();
+      const resumeLabel = resumeAt > 3 ? formatTime(resumeAt) : '';
       videoWrapper.innerHTML = `
         <div class="youtube-player-shell">
           <button class="youtube-poster-button" type="button" aria-label="Play ${title}">
             <img src="https://img.youtube.com/vi/${videoId}/hqdefault.jpg" alt="${title}" onerror="this.src='assets/images/profile.png'">
             <span class="youtube-play-button"><i data-lucide="play" fill="currentColor"></i></span>
+            ${resumeLabel ? `<span class="youtube-resume-badge">Resume ${resumeLabel}</span>` : ''}
           </button>
         </div>
       `;
       const posterButton = videoWrapper.querySelector('.youtube-poster-button');
       posterButton?.addEventListener('click', () => {
+        const startParam = resumeAt > 3 ? `&start=${Math.floor(resumeAt)}` : '';
         videoWrapper.innerHTML = `
           <div class="youtube-player-shell">
             <iframe
               id="youtubePlayer"
               title="${title}"
-              src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&playsinline=1&controls=1&rel=0&modestbranding=1&iv_load_policy=3&enablejsapi=1&origin=${embedOrigin}"
+              src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&playsinline=1&controls=1&rel=0&modestbranding=1&iv_load_policy=3&enablejsapi=1&origin=${embedOrigin}${startParam}"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowfullscreen
               referrerpolicy="strict-origin-when-cross-origin"></iframe>
@@ -212,10 +262,21 @@
   }
   
   if (!isYouTube && video && typeof video.addEventListener === 'function') {
+    video.addEventListener('loadedmetadata', () => {
+      const resumeAt = getSavedPlaybackTime();
+      if (resumeAt > 3 && resumeAt < Number(video.duration || Infinity)) {
+        video.currentTime = resumeAt;
+      }
+      startProgressSaving();
+    });
+    video.addEventListener('timeupdate', () => savePlaybackProgress());
     video.addEventListener('ended', () => {
+      clearPlaybackProgress();
       triggerNextLectureTransition();
     });
   }
+
+  window.addEventListener('beforeunload', () => savePlaybackProgress());
 
   const addNoteBtn = document.getElementById('addNoteBtn');
   const noteText = document.getElementById('noteText');
