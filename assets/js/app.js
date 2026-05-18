@@ -1,4 +1,9 @@
 (async () => {
+  const initialDashboardGrid = document.getElementById('dashboardContinueWatching');
+  if (initialDashboardGrid) {
+    initialDashboardGrid.innerHTML = '<div class="dashboard-loading-state">Loading your recent lectures...</div>';
+  }
+
   function readJson(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
@@ -16,22 +21,6 @@
     activeLecture = null;
   }
 
-  const DEFAULT_LECTURES = {
-    physics: [
-      { id: 'phy1', title: 'Lecture 1 - Wave-Particle Duality', youtubeId: 'p7bzE1E5PMY', duration: '45:00' },
-      { id: 'phy2', title: 'Lecture 2 - Schrodinger Equation', youtubeId: 'UjaAxUO6-Fg', duration: '35:20' }
-    ],
-    maths: [
-      { id: 'math1', title: 'Lecture 1 - Limits and Continuity', youtubeId: 'mEc7w_T3g0M', duration: '28:15' },
-      { id: 'math2', title: 'Lecture 2 - Derivative Rules & Intuition', youtubeId: '9vKqVkJXQ7E', duration: '42:10' }
-    ],
-    chemistry: [
-      { id: 'chem1', title: 'Lecture 1 - Organic Chem Fundamentals', youtubeId: 'pG-K-4V5H_w', duration: '31:40' }
-    ],
-    programming: [
-      { id: 'prog1', title: 'Lecture 1 - React Hooks in Depth', youtubeId: 'Ke90Tje7VS0', duration: '1:15:00' }
-    ]
-  };
   const SAFE_DEMO_VIDEO_ID = 'M7lc1UVf-VE';
   const DEMO_LECTURE_IDS = new Set(['phy1', 'phy2', 'math1', 'math2', 'chem1', 'prog1']);
 
@@ -1033,25 +1022,6 @@
   const LECTURES_KEY = 'studyflow:lectures:';
 
   function defaultLectures(subjectId) {
-    if (subjectId === 'physics') {
-      return [
-        { id: 'phy1', title: 'Lecture 1 — Wave-Particle Duality', youtubeId: 'p7bzE1E5PMY', duration: '45:00' },
-        { id: 'phy2', title: 'Lecture 2 — Schrödinger Equation', youtubeId: 'UjaAxUO6-Fg', duration: '35:20' }
-      ];
-    } else if (subjectId === 'maths') {
-      return [
-        { id: 'math1', title: 'Lecture 1 — Limits and Continuity', youtubeId: 'mEc7w_T3g0M', duration: '28:15' },
-        { id: 'math2', title: 'Lecture 2 — Derivative Rules & Intuition', youtubeId: '9vKqVkJXQ7E', duration: '42:10' }
-      ];
-    } else if (subjectId === 'chemistry') {
-      return [
-        { id: 'chem1', title: 'Lecture 1 — Organic Chem Fundamentals', youtubeId: 'pG-K-4V5H_w', duration: '31:40' }
-      ];
-    } else if (subjectId === 'programming') {
-      return [
-        { id: 'prog1', title: 'Lecture 1 — React Hooks in Depth', youtubeId: 'Ke90Tje7VS0', duration: '1:15:00' }
-      ];
-    }
     return [];
   }
 
@@ -1262,63 +1232,8 @@
       if (onSuccessCallback) await onSuccessCallback();
 
     } catch (error) {
-      console.warn('CORS feed fetch failed or returned empty. Falling back to dynamic offline generation...', error);
-      
-      // Intelligent dynamic fallback generator based on subject name
-      const s = sid.toLowerCase();
-      let fallbackVideos = [];
-      
-      if (s.includes('math') || s.includes('calc') || s.includes('algebra') || s.includes('geometry') || s.includes('testing')) {
-        fallbackVideos = [
-          { title: 'Lecture 1 — Limits and Continuity Intro', youtubeId: 'mEc7w_T3g0M', duration: '28:15' },
-          { title: 'Lecture 2 — Derivative Rules & Intuition', youtubeId: '9vKqVkJXQ7E', duration: '42:10' },
-          { title: 'Lecture 3 — Integral Calculus Basics', youtubeId: 'fsD1zoBCx-4', duration: '31:40' },
-          { title: 'Lecture 4 — Advanced Practical Math Proofs', youtubeId: '0ZJgIjIuY7U', duration: '28:50' },
-          { title: 'Lecture 5 — Differential Equations', youtubeId: 'QXT4OVM4vXI', duration: '48:30' }
-        ];
-      } else if (s.includes('code') || s.includes('prog') || s.includes('react') || s.includes('dev') || s.includes('js') || s.includes('python')) {
-        fallbackVideos = [
-          { title: 'Lecture 1 — React Hooks in Depth', youtubeId: 'Ke90Tje7VS0', duration: '1:15:00' },
-          { title: 'Lecture 2 — JavaScript Core Fundamentals', youtubeId: 'W6NZfCO5SIk', duration: '56:20' },
-          { title: 'Lecture 3 — Node.js & Express APIs', youtubeId: 's2mDY-HYb60', duration: '45:30' }
-        ];
-      } else if (s.includes('chem')) {
-        fallbackVideos = [
-          { title: 'Lecture 1 — Organic Chem Fundamentals', youtubeId: 'pG-K-4V5H_w', duration: '31:40' },
-          { title: 'Lecture 2 — Chemical Bonds & Orbitals', youtubeId: 'k3rRrl9J2F4', duration: '26:15' }
-        ];
-      } else if (s.includes('physic') || s.includes('quantum') || s.includes('mechanic')) {
-        fallbackVideos = [
-          { title: 'Lecture 1 — Wave-Particle Duality', youtubeId: 'p7bzE1E5PMY', duration: '45:00' },
-          { title: 'Lecture 2 — Schrödinger Equation', youtubeId: 'UjaAxUO6-Fg', duration: '35:20' }
-        ];
-      } else {
-        fallbackVideos = [
-          { title: 'Lecture 1 — How to Learn Anything Faster', youtubeId: '5MgBikgcWnY', duration: '17:35' },
-          { title: 'Lecture 2 — The Science of Productive Study', youtubeId: 'TCr4gp0Y898', duration: '22:15' },
-          { title: 'Lecture 3 — Deep Work & Cognitive Focus', youtubeId: 'fsD1zoBCx-4', duration: '28:40' }
-        ];
-      }
-
-      // Add subject suffixes dynamically
-      fallbackVideos.forEach(v => {
-        if (!v.title.includes(activeSubName)) {
-          v.title += ' (' + activeSubName + ')';
-        }
-      });
-
-      // Format them identically to a real import
-      const importedLectures = fallbackVideos.map((v, i) => ({
-        id: `fb-${v.youtubeId}-${Date.now()}-${i}`,
-        title: v.title,
-        youtubeId: v.youtubeId,
-        duration: v.duration
-      }));
-
-      await saveLectures(sid, importedLectures);
-      if (inputElement) inputElement.value = '';
-      setStatus(`✅ Generated ${fallbackVideos.length} lectures for ${activeSubName} (offline mode).`, '#fbbf24');
-      if (onSuccessCallback) await onSuccessCallback();
+      console.warn('Playlist import failed.', error);
+      setStatus('Could not import this playlist. Check that the playlist is public and try again.', '#f87171');
     } finally {
       if (btnElement) {
         btnElement.disabled = false;
@@ -1905,6 +1820,7 @@ Request saved: ${task}`;
     }
     
     if (window.lucide) window.lucide.createIcons();
+    document.body.classList.add('dashboard-ready');
   }
 
   // init
