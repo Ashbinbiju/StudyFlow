@@ -31,6 +31,60 @@ app.use(express.static(path.join(__dirname, '..')));
 // Simple ping should not wait on database startup.
 app.get('/api/ping', (req, res) => res.json({ ok: true }));
 
+function decodeXmlText(value = '') {
+  return String(value)
+    .replace(/<!\[CDATA\[(.*?)\]\]>/gs, '$1')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function parseYouTubeFeed(xml) {
+  const entries = String(xml || '').match(/<entry[\s\S]*?<\/entry>/g) || [];
+  return entries.map((entry, index) => {
+    const videoId = entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)?.[1]?.trim();
+    const rawTitle = entry.match(/<title>([\s\S]*?)<\/title>/)?.[1] || `Lecture ${index + 1}`;
+    if (!videoId) return null;
+    return {
+      id: `yt-${videoId}-${Date.now()}-${index}`,
+      title: decodeXmlText(rawTitle).trim() || `Lecture ${index + 1}`,
+      youtubeId: videoId,
+      duration: '--:--'
+    };
+  }).filter(Boolean);
+}
+
+app.get('/api/youtube/playlist', async (req, res) => {
+  const playlistId = String(req.query.playlistId || '').trim();
+  if (!/^[A-Za-z0-9_-]+$/.test(playlistId)) {
+    return res.status(400).json({ error: 'valid playlistId required' });
+  }
+
+  try {
+    const response = await fetch(`https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(playlistId)}`, {
+      headers: {
+        'User-Agent': 'StudyFlow/1.0 (+https://rcstudyflow.vercel.app)'
+      }
+    });
+    const feedText = await response.text();
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'YouTube playlist feed request failed' });
+    }
+
+    const lectures = parseYouTubeFeed(feedText);
+    if (!lectures.length) {
+      return res.status(404).json({ error: 'No public videos found in this playlist' });
+    }
+
+    res.json({ lectures });
+  } catch (error) {
+    console.error('YouTube playlist import failed:', error);
+    res.status(502).json({ error: 'YouTube playlist service unavailable' });
+  }
+});
+
 // Setup SQL.js
 const dbFile = process.env.VERCEL ? path.join('/tmp', 'studyflow.db') : path.join(__dirname, 'studyflow.db');
 let db = null;

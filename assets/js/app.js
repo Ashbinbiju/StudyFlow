@@ -1196,6 +1196,17 @@
     if (window.lucide) window.lucide.createIcons();
 
     try {
+      let importedLectures = [];
+
+      const serverResponse = await fetch(`/api/youtube/playlist?playlistId=${encodeURIComponent(playlistId)}`, {
+        cache: 'no-store'
+      });
+      if (serverResponse.ok) {
+        const data = await serverResponse.json();
+        importedLectures = Array.isArray(data.lectures) ? data.lectures : [];
+      }
+
+      if (importedLectures.length === 0) {
       // Fetch playlist from YouTube's public RSS feed via our premium Dual CORS Proxy
       const targetUrl = 'https://www.youtube.com/feeds/videos.xml?playlist_id=' + playlistId;
       
@@ -1238,7 +1249,6 @@
         throw new Error('No videos found in playlist feed');
       }
       
-      const importedLectures = [];
       for (let i = 0; i < entries.length; i++) {
         const entry = entries[i];
         const title = entry.getElementsByTagName("title")[0]?.textContent || `Lecture ${i+1}`;
@@ -1265,6 +1275,7 @@
             duration: duration
           });
         }
+      }
       }
 
       if (importedLectures.length === 0) {
