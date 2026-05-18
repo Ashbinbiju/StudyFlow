@@ -102,41 +102,43 @@
     });
   }
 
-  // BUG FIX #1: Sync currentSubject to activeLecture's subject so notes go to the right bucket
-  if (activeLecture && activeLecture.subjectId) {
-    localStorage.setItem('studyflow:currentSubject', activeLecture.subjectId);
-  }
-
-  // Update video details on screen if activeLecture is set
-  if (activeLecture) {
-    const subjectLabel = activeLecture.subjectId
-      ? activeLecture.subjectId.charAt(0).toUpperCase() + activeLecture.subjectId.slice(1)
-      : 'StudyFlow';
-    const detailHeader = document.querySelector('.video-details h1');
-    if (detailHeader) detailHeader.textContent = activeLecture.title;
-    const detailMeta = document.getElementById('videoMetaLine');
-    if (detailMeta) {
-      detailMeta.textContent = `${subjectLabel} lecture • Duration: ${activeLecture.duration || '--:--'}`;
-    }
-    const metaTag = document.querySelector('.video-meta-tags span:nth-of-type(2)');
-    if (metaTag) metaTag.textContent = activeLecture.title;
-    const activeBadge = document.querySelector('.video-meta-tags span:first-of-type');
-    if (activeBadge) activeBadge.textContent = subjectLabel;
-  } else {
-    document.title = 'StudyFlow | Watch & Notes';
-    const detailHeader = document.querySelector('.video-details h1');
-    if (detailHeader) detailHeader.textContent = 'Select a lecture to start watching';
-    const detailMeta = document.getElementById('videoMetaLine');
-    if (detailMeta) detailMeta.textContent = 'No lecture selected';
-    const metaTag = document.querySelector('.video-meta-tags span:nth-of-type(2)');
-    if (metaTag) metaTag.textContent = 'Select a lecture';
-    const activeBadge = document.querySelector('.video-meta-tags span:first-of-type');
-    if (activeBadge) activeBadge.textContent = 'StudyFlow';
-  }
-
-  // Load YouTube Player if required
-  if (isYouTube) {
+  function renderActiveLectureView() {
     const videoWrapper = document.querySelector('.video-wrapper');
+    if (activeLecture) {
+      const subjectLabel = activeLecture.subjectName || activeLecture.subjectId || 'StudyFlow';
+      const detailHeader = document.querySelector('.video-details h1');
+      if (detailHeader) detailHeader.textContent = activeLecture.title;
+      const detailMeta = document.getElementById('videoMetaLine');
+      if (detailMeta) {
+        detailMeta.textContent = `${subjectLabel} lecture - Duration: ${activeLecture.duration || '--:--'}`;
+      }
+      const metaTag = document.querySelector('.video-meta-tags span:nth-of-type(2)');
+      if (metaTag) metaTag.textContent = activeLecture.title;
+      const activeBadge = document.querySelector('.video-meta-tags span:first-of-type');
+      if (activeBadge) activeBadge.textContent = subjectLabel;
+    } else {
+      document.title = 'StudyFlow | Watch & Notes';
+      const detailHeader = document.querySelector('.video-details h1');
+      if (detailHeader) detailHeader.textContent = 'Select a lecture to start watching';
+      const detailMeta = document.getElementById('videoMetaLine');
+      if (detailMeta) detailMeta.textContent = 'No lecture selected';
+      const metaTag = document.querySelector('.video-meta-tags span:nth-of-type(2)');
+      if (metaTag) metaTag.textContent = 'Select a lecture';
+      const activeBadge = document.querySelector('.video-meta-tags span:first-of-type');
+      if (activeBadge) activeBadge.textContent = 'StudyFlow';
+      if (videoWrapper) {
+        videoWrapper.innerHTML = `
+          <div class="empty-video-state">
+            <i data-lucide="video-off"></i>
+            <span>Select a lecture from the Course Playlist</span>
+          </div>
+        `;
+      }
+      if (window.lucide) window.lucide.createIcons();
+      return;
+    }
+
+    if (!isYouTube) return;
     if (videoWrapper) {
       const controlsOverlay = document.querySelector('.video-controls-overlay');
       if (controlsOverlay) {
@@ -247,9 +249,11 @@
   const speedSelect = document.getElementById('speedSelect');
   const subjectSelect = document.getElementById('subjectSelect');
 
-  const videoId = activeLecture
-    ? String(activeLecture.id || activeLecture.youtubeId || 'video1')
-    : 'video1';
+  function getActiveVideoId() {
+    return activeLecture
+      ? String(activeLecture.id || activeLecture.youtubeId || 'video1')
+      : 'video1';
+  }
   const SUBJECTS_KEY = 'studyflow:subjects';
   const CURRENT_SUBJECT_KEY = 'studyflow:currentSubject';
 
@@ -398,13 +402,66 @@
     } catch (_) {}
   }
 
-  function notesKey(){ const sid = getCurrentSubjectId() || 'global'; return `studyflow:notes:${sid}:${videoId}` }
-  function bookmarksKey(){ const sid = getCurrentSubjectId() || 'global'; return `studyflow:bookmarks:${sid}:${videoId}` }
+  function clearActiveLectureState() {
+    localStorage.removeItem('studyflow:activeLecture');
+    activeLecture = null;
+    isYouTube = false;
+    ytPlayer = null;
+    youtubeCurrentTime = 0;
+  }
+
+  async function reconcileWatchLectureState(subjects) {
+    const onWatchPage = Boolean(document.querySelector('.video-wrapper') || subjectSelect);
+    if (!onWatchPage) return;
+
+    const validIds = new Set(subjects.map(s => s.id));
+    let current = getCurrentSubjectId();
+
+    if (current && !validIds.has(current)) {
+      localStorage.removeItem(CURRENT_SUBJECT_KEY);
+      current = null;
+    }
+
+    if (activeLecture?.subjectId && !validIds.has(activeLecture.subjectId)) {
+      clearActiveLectureState();
+    }
+
+    if (!current && activeLecture?.subjectId && validIds.has(activeLecture.subjectId)) {
+      current = activeLecture.subjectId;
+      setCurrentSubjectId(current);
+    }
+
+    if (!current && subjects.length) {
+      current = subjects[0].id;
+      setCurrentSubjectId(current);
+    }
+
+    if (activeLecture && current && activeLecture.subjectId !== current) {
+      clearActiveLectureState();
+    }
+
+    if (activeLecture) {
+      const lectures = await loadLectures(activeLecture.subjectId);
+      const stillExists = lectures.some(l =>
+        (activeLecture.id && l.id === activeLecture.id) ||
+        (activeLecture.youtubeId && l.youtubeId === activeLecture.youtubeId)
+      );
+      if (!stillExists) {
+        clearActiveLectureState();
+      }
+    }
+
+    isYouTube = Boolean(activeLecture?.youtubeId);
+    video = isYouTube ? videoMock : document.getElementById('player');
+  }
+
+  function notesKey(){ const sid = getCurrentSubjectId() || 'global'; return `studyflow:notes:${sid}:${getActiveVideoId()}` }
+  function bookmarksKey(){ const sid = getCurrentSubjectId() || 'global'; return `studyflow:bookmarks:${sid}:${getActiveVideoId()}` }
 
   async function loadNotes(){
     if(serverAvailable){
       const sid = getCurrentSubjectId();
-      const res = await fetch(`/api/subjects/${sid}/notes?videoId=${encodeURIComponent(videoId)}`);
+      const res = await fetch(`/api/subjects/${sid}/notes?videoId=${encodeURIComponent(getActiveVideoId())}`);
       if(res.ok) return await res.json();
       return [];
     }
@@ -422,7 +479,7 @@
   async function loadBookmarks(){
     if(serverAvailable){
       const sid = getCurrentSubjectId();
-      const res = await fetch(`/api/subjects/${sid}/bookmarks?videoId=${encodeURIComponent(videoId)}`);
+      const res = await fetch(`/api/subjects/${sid}/bookmarks?videoId=${encodeURIComponent(getActiveVideoId())}`);
       if(res.ok) return await res.json();
       return [];
     }
@@ -897,7 +954,7 @@
       const text = noteText ? noteText.value.trim() : '';
       if(!text) return alert('Please write a note first!');
       const sid = getCurrentSubjectId();
-      const payload = { videoId, time: Math.floor(getCurrentPlaybackTime()), text };
+      const payload = { videoId: getActiveVideoId(), time: Math.floor(getCurrentPlaybackTime()), text };
       if(serverAvailable){
         await fetch(`/api/subjects/${sid}/notes`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       }else{
@@ -961,7 +1018,7 @@
       const sid = getCurrentSubjectId();
       const t = Math.floor(getCurrentPlaybackTime());
       if(serverAvailable){
-        await fetch(`/api/subjects/${sid}/bookmarks`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({videoId,time:t})});
+        await fetch(`/api/subjects/${sid}/bookmarks`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({videoId:getActiveVideoId(),time:t})});
       }else{
         // BUG FIX #3: was missing await — loaded Promise not array
         const b = await loadBookmarks();
@@ -1854,18 +1911,9 @@ Request saved: ${task}`;
   await checkServer();
   await hydrateSettingsFromServer();
   initSettingsControls();
-  if (activeLecture?.subjectId) {
-    const subjects = await loadSubjects();
-    if (!subjects.some(s => s.id === activeLecture.subjectId)) {
-      localStorage.removeItem('studyflow:activeLecture');
-      activeLecture = null;
-      isYouTube = false;
-      if (document.querySelector('.video-wrapper')) {
-        window.location.reload();
-        return;
-      }
-    }
-  }
+  const subjects = await loadSubjects();
+  await reconcileWatchLectureState(subjects);
+  renderActiveLectureView();
   if (activeLecture) {
     recordPlayedLecture(activeLecture);
   }
