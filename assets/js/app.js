@@ -137,7 +137,6 @@
       const rawVideoId = activeLecture.youtubeId;
       const videoId = encodeURIComponent(rawVideoId);
       const embedOrigin = encodeURIComponent(window.location.origin);
-      const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
       const title = escapeHtml(activeLecture.title || 'YouTube lecture');
       videoWrapper.innerHTML = `
         <div class="youtube-player-shell">
@@ -145,7 +144,6 @@
             <img src="https://img.youtube.com/vi/${videoId}/hqdefault.jpg" alt="${title}" onerror="this.src='assets/images/profile.png'">
             <span class="youtube-play-button"><i data-lucide="play" fill="currentColor"></i></span>
           </button>
-          <a class="youtube-open-link" href="${watchUrl}" target="_blank" rel="noopener">Open on YouTube</a>
         </div>
       `;
       const posterButton = videoWrapper.querySelector('.youtube-poster-button');
@@ -159,7 +157,6 @@
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowfullscreen
               referrerpolicy="strict-origin-when-cross-origin"></iframe>
-            <a class="youtube-open-link" href="${watchUrl}" target="_blank" rel="noopener">Open on YouTube</a>
           </div>
         `;
         startYouTubeTimeTracking('youtubePlayer');

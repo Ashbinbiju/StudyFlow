@@ -937,17 +937,7 @@ body:not(.dashboard-ready) #dashboardContinueWatching .video-card {
 }
 
 .youtube-open-link {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  z-index: 2;
-  padding: 8px 12px;
-  border-radius: 8px;
-  color: white;
-  background: rgba(0, 0, 0, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  font-size: 0.82rem;
-  text-decoration: none;
+  display: none;
 }
 
 .video-controls-overlay {
@@ -1930,6 +1920,65 @@ input:checked+.slider:before {
 /* ══════════════════════════════════════ */
 /*  Responsive — Small Mobile (≤480px)   */
 /* ══════════════════════════════════════ */
+@media (max-width: 980px) and (max-height: 560px) and (orientation: landscape) {
+  #video-app-layout {
+    display: block !important;
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+    background: #000;
+  }
+
+  #video-app-layout .sidebar,
+  #video-app-layout .topbar,
+  #video-app-layout .notes-panel,
+  #video-app-layout .video-details,
+  #video-app-layout .mobile-nav,
+  #video-app-layout .ai-fab,
+  #video-app-layout .ai-popup {
+    display: none !important;
+  }
+
+  #video-app-layout .main-content,
+  #video-app-layout .video-layout,
+  #video-app-layout .player-container {
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  #video-app-layout .video-layout {
+    display: block !important;
+  }
+
+  #video-app-layout .player-container {
+    display: flex;
+    justify-content: center;
+    background: #000;
+  }
+
+  #video-app-layout .video-wrapper {
+    width: 100vw;
+    height: 100dvh !important;
+    aspect-ratio: auto;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  #video-app-layout .youtube-player-shell,
+  #video-app-layout .youtube-player-shell iframe,
+  #video-app-layout .video-wrapper video,
+  #video-app-layout .video-wrapper iframe {
+    width: 100vw !important;
+    height: 100dvh !important;
+    object-fit: contain !important;
+  }
+}
+
 @media (max-width: 480px) {
   .welcome-section h1 {
     font-size: 1.2rem;
