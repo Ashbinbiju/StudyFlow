@@ -97,6 +97,30 @@ function parseYouTubePlaylistPage(html) {
   return lectures;
 }
 
+function parseYouTubeVideoPage(html, videoId) {
+  const page = String(html || '');
+  const title =
+    page.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i)?.[1] ||
+    page.match(/"title":"((?:\\.|[^"\\])*)"/)?.[1] ||
+    `YouTube video ${videoId}`;
+  const lengthSeconds = page.match(/"lengthSeconds":"?(\d+)"?/)?.[1];
+  const approxDurationMs = page.match(/"approxDurationMs":"?(\d+)"?/)?.[1];
+  const durationSeconds = lengthSeconds
+    ? Number(lengthSeconds)
+    : approxDurationMs
+    ? Number(approxDurationMs) / 1000
+    : 0;
+  const minutes = Math.floor(durationSeconds / 60);
+  const seconds = Math.floor(durationSeconds % 60);
+
+  return {
+    id: `yt-${videoId}-${Date.now()}-0`,
+    title: decodeJsonString(decodeXmlText(title)).trim() || `YouTube video ${videoId}`,
+    youtubeId: videoId,
+    duration: durationSeconds > 0 ? `${minutes}:${String(seconds).padStart(2, '0')}` : '--:--'
+  };
+}
+
 app.get('/api/youtube/playlist', async (req, res) => {
   const playlistId = String(req.query.playlistId || '').trim();
   if (!/^[A-Za-z0-9_-]+$/.test(playlistId)) {
@@ -139,6 +163,31 @@ app.get('/api/youtube/playlist', async (req, res) => {
   }
 });
 
+app.get('/api/youtube/video', async (req, res) => {
+  const videoId = String(req.query.videoId || '').trim();
+  if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) {
+    return res.status(400).json({ error: 'valid videoId required' });
+  }
+
+  try {
+    const response = await fetch(`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9'
+      }
+    });
+    const pageHtml = await response.text();
+    if (!response.ok) {
+      return res.status(404).json({ error: 'Video not found' });
+    }
+
+    res.json({ lecture: parseYouTubeVideoPage(pageHtml, videoId) });
+  } catch (error) {
+    console.error('YouTube video import failed:', error);
+    res.status(502).json({ error: 'YouTube video service unavailable' });
+  }
+});
+
 // Setup SQL.js
 const dbFile = process.env.VERCEL ? path.join('/tmp', 'studyflow.db') : path.join(__dirname, 'studyflow.db');
 let db = null;
@@ -162,6 +211,15 @@ async function initDb() {
     CREATE TABLE IF NOT EXISTS subjects (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS lectures (
+      subjectId TEXT NOT NULL,
+      id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      youtubeId TEXT,
+      duration TEXT,
+      position INTEGER NOT NULL,
+      PRIMARY KEY (subjectId, id)
     );
     CREATE TABLE IF NOT EXISTS notes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -253,9 +311,48 @@ app.post('/api/subjects', (req, res) => {
 app.delete('/api/subjects/:id', (req, res) => {
   const { id } = req.params;
   runQuery('DELETE FROM subjects WHERE id = ?', [id]);
+  runQuery('DELETE FROM lectures WHERE subjectId = ?', [id]);
   runQuery('DELETE FROM notes WHERE subjectId = ?', [id]);
   runQuery('DELETE FROM bookmarks WHERE subjectId = ?', [id]);
   res.json({ ok: true });
+});
+
+// Lectures
+app.get('/api/subjects/:id/lectures', (req, res) => {
+  const { id } = req.params;
+  const rows = getAll(
+    'SELECT id, title, youtubeId, duration FROM lectures WHERE subjectId = ? ORDER BY position, rowid',
+    [id]
+  );
+  res.json(rows);
+});
+
+app.put('/api/subjects/:id/lectures', (req, res) => {
+  const { id } = req.params;
+  const lectures = Array.isArray(req.body?.lectures) ? req.body.lectures : null;
+  if (!lectures) return res.status(400).json({ error: 'lectures array required' });
+
+  try {
+    db.run('BEGIN TRANSACTION');
+    db.run('DELETE FROM lectures WHERE subjectId = ?', [id]);
+    lectures.forEach((lecture, index) => {
+      const lectureId = String(lecture?.id || lecture?.youtubeId || `lecture-${index + 1}`);
+      const title = String(lecture?.title || `Lecture ${index + 1}`).trim();
+      const youtubeId = lecture?.youtubeId ? String(lecture.youtubeId) : null;
+      const duration = lecture?.duration ? String(lecture.duration) : '--:--';
+      db.run(
+        'INSERT INTO lectures (subjectId, id, title, youtubeId, duration, position) VALUES (?, ?, ?, ?, ?, ?)',
+        [id, lectureId, title || `Lecture ${index + 1}`, youtubeId, duration, index]
+      );
+    });
+    db.run('COMMIT');
+    saveDb();
+    res.json({ ok: true, count: lectures.length });
+  } catch (error) {
+    try { db.run('ROLLBACK'); } catch (_) {}
+    console.error('Failed to save lectures:', error);
+    res.status(500).json({ error: 'failed to save lectures' });
+  }
 });
 
 // Settings

@@ -322,13 +322,39 @@
     }catch(e){ serverAvailable = false }
   }
 
-  async function loadSubjects(){
-    if(serverAvailable){
-      const res = await fetch('/api/subjects');
-      if(res.ok) return await res.json();
-      return [];
-    }
+  function loadLocalSubjects() {
     try{ return JSON.parse(localStorage.getItem(SUBJECTS_KEY)) || [] }catch(e){return []}
+  }
+
+  function mergeSubjects(remoteSubjects, localSubjects) {
+    const byId = new Map();
+    (remoteSubjects || []).forEach(s => {
+      if (s?.id) byId.set(s.id, { id: s.id, name: s.name || s.id });
+    });
+    (localSubjects || []).forEach(s => {
+      if (s?.id && !byId.has(s.id)) byId.set(s.id, { id: s.id, name: s.name || s.id });
+    });
+    return Array.from(byId.values());
+  }
+
+  async function loadSubjects(){
+    const localSubjects = loadLocalSubjects();
+    if(serverAvailable){
+      try {
+        const res = await fetch('/api/subjects', { cache: 'no-store' });
+        if(res.ok) {
+          const data = await res.json();
+          const remoteSubjects = Array.isArray(data) ? data : [];
+          const mergedSubjects = mergeSubjects(remoteSubjects, localSubjects);
+          localStorage.setItem(SUBJECTS_KEY, JSON.stringify(mergedSubjects));
+          if (localSubjects.length && mergedSubjects.length !== remoteSubjects.length) {
+            saveSubjects(mergedSubjects).catch(() => {});
+          }
+          return mergedSubjects;
+        }
+      } catch(e) {}
+    }
+    return localSubjects;
   }
   async function saveSubjects(list){
     localStorage.setItem(SUBJECTS_KEY, JSON.stringify(list));
@@ -572,13 +598,23 @@
   function bookmarksKey(){ const sid = getCurrentSubjectId() || 'global'; return `studyflow:bookmarks:${sid}:${getActiveVideoId()}` }
 
   async function loadNotes(){
+    let localNotes = [];
+    try{ localNotes = JSON.parse(localStorage.getItem(notesKey())) || [] }catch(e){ localNotes = [] }
     if(serverAvailable){
-      const sid = getCurrentSubjectId();
-      const res = await fetch(`/api/subjects/${sid}/notes?videoId=${encodeURIComponent(getActiveVideoId())}`);
-      if(res.ok) return await res.json();
-      return [];
+      try {
+        const sid = getCurrentSubjectId();
+        const res = await fetch(`/api/subjects/${sid}/notes?videoId=${encodeURIComponent(getActiveVideoId())}`);
+        if(res.ok) {
+          const remoteNotes = await res.json();
+          if (remoteNotes.length > 0) {
+            localStorage.setItem(notesKey(), JSON.stringify(remoteNotes));
+            return remoteNotes;
+          }
+          return localNotes;
+        }
+      } catch(e) {}
     }
-    try{ return JSON.parse(localStorage.getItem(notesKey())) || [] }catch(e){return []}
+    return localNotes;
   }
   async function saveNotes(notes){
     if(serverAvailable){
@@ -590,13 +626,23 @@
   }
 
   async function loadBookmarks(){
+    let localBookmarks = [];
+    try{ localBookmarks = JSON.parse(localStorage.getItem(bookmarksKey())) || [] }catch(e){ localBookmarks = [] }
     if(serverAvailable){
-      const sid = getCurrentSubjectId();
-      const res = await fetch(`/api/subjects/${sid}/bookmarks?videoId=${encodeURIComponent(getActiveVideoId())}`);
-      if(res.ok) return await res.json();
-      return [];
+      try {
+        const sid = getCurrentSubjectId();
+        const res = await fetch(`/api/subjects/${sid}/bookmarks?videoId=${encodeURIComponent(getActiveVideoId())}`);
+        if(res.ok) {
+          const remoteBookmarks = await res.json();
+          if (remoteBookmarks.length > 0) {
+            localStorage.setItem(bookmarksKey(), JSON.stringify(remoteBookmarks));
+            return remoteBookmarks;
+          }
+          return localBookmarks;
+        }
+      } catch(e) {}
     }
-    try{ return JSON.parse(localStorage.getItem(bookmarksKey())) || [] }catch(e){return []}
+    return localBookmarks;
   }
   async function saveBookmarks(b){
     if(serverAvailable){
@@ -700,7 +746,7 @@
     sidebarList.innerHTML = '';
     
     if (lectures.length === 0) {
-      sidebarList.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem; padding: 12px; text-align: center;">No lectures found. Go to Subjects workspace to import a playlist!</div>';
+      sidebarList.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem; padding: 12px; text-align: center;">No lectures found. Go to Subjects workspace to import a playlist or video!</div>';
       return;
     }
 
@@ -1068,15 +1114,23 @@
       if(!text) return alert('Please write a note first!');
       const sid = getCurrentSubjectId();
       const payload = { videoId: getActiveVideoId(), time: Math.floor(getCurrentPlaybackTime()), text };
+      const note = { id: Date.now(), time: payload.time, text };
+      const notes = await loadNotes();
       if(serverAvailable){
-        await fetch(`/api/subjects/${sid}/notes`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+        try {
+          const res = await fetch(`/api/subjects/${sid}/notes`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+          if (res.ok) {
+            const saved = await res.json();
+            if (saved?.id != null) note.id = saved.id;
+          }
+        } catch(e) {
+          console.warn('Could not sync note to server.', e);
+        }
       }else{
-        // BUG FIX #2: was missing await — saved [Promise] not real array
-        const notes = await loadNotes();
-        const note = { id: Date.now(), time: payload.time, text };
-        notes.push(note);
-        await saveNotes(notes);
+        // Keep offline storage as the source of truth when no server is running.
       }
+      notes.push(note);
+      await saveNotes(notes);
       if(noteText) noteText.value='';
       await renderNotes(searchNotes ? searchNotes.value : '');
     })();
@@ -1130,15 +1184,23 @@
     return (async ()=>{
       const sid = getCurrentSubjectId();
       const t = Math.floor(getCurrentPlaybackTime());
+      const b = await loadBookmarks();
+      const obj = { id: Date.now(), time: t };
       if(serverAvailable){
-        await fetch(`/api/subjects/${sid}/bookmarks`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({videoId:getActiveVideoId(),time:t})});
+        try {
+          const res = await fetch(`/api/subjects/${sid}/bookmarks`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({videoId:getActiveVideoId(),time:t})});
+          if (res.ok) {
+            const saved = await res.json();
+            if (saved?.id != null) obj.id = saved.id;
+          }
+        } catch(e) {
+          console.warn('Could not sync bookmark to server.', e);
+        }
       }else{
-        // BUG FIX #3: was missing await — loaded Promise not array
-        const b = await loadBookmarks();
-        const obj = { id: Date.now(), time: t };
-        b.push(obj);
-        await saveBookmarks(b);
+        // Keep offline storage as the source of truth when no server is running.
       }
+      b.push(obj);
+      await saveBookmarks(b);
       alert('Bookmarked at ' + formatTime(t));
     })();
   }
@@ -1149,10 +1211,41 @@
     return [];
   }
 
-  async function loadLectures(subjectId) {
+  function loadLocalLectures(subjectId) {
+    if (!subjectId) return [];
     try {
       const stored = localStorage.getItem(LECTURES_KEY + subjectId);
-      if (stored) return (JSON.parse(stored) || []).map(normalizeLecture);
+      return stored ? (JSON.parse(stored) || []).map(normalizeLecture) : [];
+    } catch(e) {
+      localStorage.removeItem(LECTURES_KEY + subjectId);
+      return [];
+    }
+  }
+
+  async function loadLectures(subjectId) {
+    if (!subjectId) return [];
+    const localLectures = loadLocalLectures(subjectId);
+    if (serverAvailable) {
+      try {
+        const res = await fetch(`/api/subjects/${encodeURIComponent(subjectId)}/lectures`, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          const remoteLectures = (Array.isArray(data) ? data : []).map(normalizeLecture);
+          if (remoteLectures.length > 0) {
+            localStorage.setItem(LECTURES_KEY + subjectId, JSON.stringify(remoteLectures));
+            return remoteLectures;
+          }
+          if (localLectures.length > 0) {
+            saveLectures(subjectId, localLectures).catch(() => {});
+            return localLectures;
+          }
+          return [];
+        }
+      } catch(e) {}
+    }
+
+    if (localLectures.length > 0) return localLectures;
+    try {
       const defaults = defaultLectures(subjectId);
       if (defaults.length > 0) {
         localStorage.setItem(LECTURES_KEY + subjectId, JSON.stringify(defaults));
@@ -1164,7 +1257,21 @@
   }
 
   async function saveLectures(subjectId, lectures) {
-    localStorage.setItem(LECTURES_KEY + subjectId, JSON.stringify(lectures));
+    if (!subjectId) return;
+    const normalizedLectures = (lectures || []).map(normalizeLecture);
+    localStorage.setItem(LECTURES_KEY + subjectId, JSON.stringify(normalizedLectures));
+    if (serverAvailable) {
+      try {
+        const res = await fetch(`/api/subjects/${encodeURIComponent(subjectId)}/lectures`, {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ lectures: normalizedLectures })
+        });
+        if (!res.ok) throw new Error('Server did not save lectures.');
+      } catch(e) {
+        console.warn('Could not sync lectures to server.', e);
+      }
+    }
   }
 
   async function renderLecturesList() {
@@ -1179,7 +1286,7 @@
     if (countEl) countEl.textContent = `${lectures.length} lecture${lectures.length !== 1 ? 's' : ''}`;
 
     if (lectures.length === 0) {
-      listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:0.875rem;">No lectures yet.<br>Import a YouTube playlist above to get started!</div>';
+      listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:0.875rem;">No lectures yet.<br>Import a YouTube playlist or video above to get started!</div>';
       return;
     }
 
@@ -1238,17 +1345,60 @@
     });
   }
 
-  // Reusable Playlist Import Logic
-  async function handlePlaylistImport(url, sid, activeSubName, btnElement, statusElement, inputElement, onSuccessCallback) {
-    if (!url) return alert('Please enter a YouTube Playlist URL!');
-    
-    const playlistReg = /[?&]list=([^#\&\?]+)/;
-    const match = url.match(playlistReg);
-    if (!match) {
-      return alert('Invalid YouTube Playlist URL! Make sure it contains a "?list=..." parameter.');
+  function extractYouTubeImport(url) {
+    const value = String(url || '').trim();
+    if (/^[A-Za-z0-9_-]{11}$/.test(value)) return { type: 'video', videoId: value };
+
+    let parsed;
+    try {
+      parsed = new URL(value);
+    } catch(e) {
+      return null;
     }
-    
-    const playlistId = match[1];
+
+    const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+    if (host !== 'youtube.com' && host !== 'm.youtube.com' && host !== 'youtu.be') return null;
+    const pathParts = parsed.pathname.split('/').filter(Boolean);
+    const playlistId = parsed.searchParams.get('list');
+    const videoId =
+      parsed.searchParams.get('v') ||
+      (host === 'youtu.be' ? pathParts[0] : null) ||
+      (['shorts', 'embed', 'live'].includes(pathParts[0]) ? pathParts[1] : null);
+
+    if (videoId && /^[A-Za-z0-9_-]{11}$/.test(videoId)) return { type: 'video', videoId };
+    if (playlistId) return { type: 'playlist', playlistId };
+    return null;
+  }
+
+  async function fetchSingleVideoLecture(videoId) {
+    try {
+      const res = await fetch(`/api/youtube/video?videoId=${encodeURIComponent(videoId)}`, {
+        cache: 'no-store'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.lecture?.youtubeId) return data.lecture;
+      }
+    } catch(e) {
+      console.warn('Server video metadata lookup failed.', e);
+    }
+
+    return {
+      id: `yt-${videoId}-${Date.now()}-0`,
+      title: `YouTube video ${videoId}`,
+      youtubeId: videoId,
+      duration: '--:--'
+    };
+  }
+
+  // Reusable YouTube import logic
+  async function handlePlaylistImport(url, sid, activeSubName, btnElement, statusElement, inputElement, onSuccessCallback) {
+    if (!url) return alert('Please enter a YouTube playlist or video URL!');
+
+    const youtubeImport = extractYouTubeImport(url);
+    if (!youtubeImport) {
+      return alert('Invalid YouTube URL. Paste a playlist URL or a single video URL.');
+    }
     
     function setStatus(msg, color) {
       if (statusElement) { 
@@ -1271,21 +1421,25 @@
       btnElement.disabled = true;
       btnElement.innerHTML = '<i data-lucide="loader"></i> Fetching...';
     }
-    setStatus('⏳ Fetching playlist videos...', 'var(--text-muted)');
+    setStatus(youtubeImport.type === 'playlist' ? 'Fetching playlist videos...' : 'Fetching video...', 'var(--text-muted)');
     if (window.lucide) window.lucide.createIcons();
 
     try {
       let importedLectures = [];
 
-      const serverResponse = await fetch(`/api/youtube/playlist?playlistId=${encodeURIComponent(playlistId)}`, {
-        cache: 'no-store'
-      });
-      if (serverResponse.ok) {
-        const data = await serverResponse.json();
-        importedLectures = Array.isArray(data.lectures) ? data.lectures : [];
-      }
+      if (youtubeImport.type === 'video') {
+        importedLectures = [await fetchSingleVideoLecture(youtubeImport.videoId)];
+      } else {
+        const playlistId = youtubeImport.playlistId;
+        const serverResponse = await fetch(`/api/youtube/playlist?playlistId=${encodeURIComponent(playlistId)}`, {
+          cache: 'no-store'
+        });
+        if (serverResponse.ok) {
+          const data = await serverResponse.json();
+          importedLectures = Array.isArray(data.lectures) ? data.lectures : [];
+        }
 
-      if (importedLectures.length === 0) {
+        if (importedLectures.length === 0) {
       // Fetch playlist from YouTube's public RSS feed via our premium Dual CORS Proxy
       const targetUrl = 'https://www.youtube.com/feeds/videos.xml?playlist_id=' + playlistId;
       
@@ -1356,6 +1510,7 @@
         }
       }
       }
+      }
 
       if (importedLectures.length === 0) {
         throw new Error('Parsed 0 valid videos');
@@ -1363,12 +1518,17 @@
 
       await saveLectures(sid, importedLectures);
       if (inputElement) inputElement.value = '';
-      setStatus(`✅ Imported ${importedLectures.length} lectures from YouTube!`, '#34d399');
+      setStatus(
+        importedLectures.length === 1
+          ? 'Imported 1 YouTube video as a course lecture.'
+          : `Imported ${importedLectures.length} lectures from YouTube.`,
+        '#34d399'
+      );
       if (onSuccessCallback) await onSuccessCallback();
 
     } catch (error) {
-      console.warn('Playlist import failed.', error);
-      setStatus('Could not import this playlist. Check that the playlist is public and try again.', '#f87171');
+      console.warn('YouTube import failed.', error);
+      setStatus('Could not import this YouTube URL. Check that it is public and try again.', '#f87171');
     } finally {
       if (btnElement) {
         btnElement.disabled = false;
@@ -1378,7 +1538,7 @@
     }
   }
 
-  // Playlist Import logic
+  // YouTube import logic
   const importPlaylistBtn = document.getElementById('importPlaylistBtn');
   const playlistUrlInput = document.getElementById('playlistUrl');
   if (importPlaylistBtn && playlistUrlInput) {
@@ -1710,7 +1870,7 @@ Request saved: ${task}`;
           <span style="color:white;font-size:0.95rem;font-weight:500;">${s.name}</span>
         </div>
         <div style="display:flex;gap:8px;flex:1;align-items:center;justify-content:flex-end;">
-          <input type="text" class="settings-import-input" data-sid="${s.id}" placeholder="Paste YouTube Playlist URL..." style="flex:1;max-width:280px;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:6px 10px;color:white;font-size:0.8rem;outline:none;">
+          <input type="text" class="settings-import-input" data-sid="${s.id}" placeholder="Paste YouTube playlist or video URL..." style="flex:1;max-width:280px;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:6px 10px;color:white;font-size:0.8rem;outline:none;">
           <button class="btn btn-primary settings-import-btn" data-sid="${s.id}" style="padding:6px 12px;font-size:0.8rem;white-space:nowrap;display:flex;align-items:center;gap:4px;"><i data-lucide="download" style="width:14px;height:14px;"></i> Import</button>
           <div class="settings-import-status" data-sid="${s.id}" style="display:none;font-size:0.75rem;max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
           <button class="settings-delete-subject" data-sid="${s.id}" data-name="${s.name}" title="Delete Subject" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:6px;border-radius:4px;transition:all 0.2s;margin-left:8px;">
@@ -1928,7 +2088,7 @@ Request saved: ${task}`;
       }
 
       if (visibleLectures.length === 0) {
-        continueGrid.innerHTML = '<div style="color:var(--text-muted); grid-column: 1/-1;">No recent lectures found. Add a playlist to a subject to start watching!</div>';
+        continueGrid.innerHTML = '<div style="color:var(--text-muted); grid-column: 1/-1;">No recent lectures found. Add a playlist or video to a subject to start watching!</div>';
       } else {
         for (const l of visibleLectures) {
           const sub = subs.find(s => s.id === l.subjectId);
