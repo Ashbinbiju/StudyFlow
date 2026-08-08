@@ -929,8 +929,6 @@
       const opt = document.createElement('option');
       opt.value = s.id;
       opt.textContent = s.name;
-      opt.style.background = '#0b0c10';
-      opt.style.color = '#ffffff';
       subjectSelect.appendChild(opt);
     });
     const cur = getCurrentSubjectId();
