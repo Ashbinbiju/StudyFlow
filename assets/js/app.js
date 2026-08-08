@@ -1,4 +1,17 @@
 (async () => {
+  window.showToast = function(msg, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `studyflow-toast toast-${type}`;
+    toast.innerHTML = `<i data-lucide="info"></i><span>${escapeHtml(msg)}</span>`;
+    document.body.appendChild(toast);
+    if (window.lucide) window.lucide.createIcons();
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  };
+
   const initialDashboardGrid = document.getElementById('dashboardContinueWatching');
   if (initialDashboardGrid) {
     initialDashboardGrid.innerHTML = '<div class="dashboard-loading-state">Loading your recent lectures...</div>';
@@ -119,6 +132,11 @@
               youtubeCurrentTime = resumeAt;
               ytPlayer.seekTo(resumeAt, true);
             }
+            // Apply saved playback speed
+            const savedSpeed = getDefaultPlaybackSpeed();
+            if (savedSpeed !== 1 && typeof ytPlayer.setPlaybackRate === 'function') {
+              ytPlayer.setPlaybackRate(savedSpeed);
+            }
             clearInterval(youtubePollTimer);
             youtubePollTimer = setInterval(() => {
               getCurrentPlaybackTime();
@@ -129,6 +147,11 @@
             getCurrentPlaybackTime();
             if (event.data === YT.PlayerState.ENDED) {
               clearPlaybackProgress();
+              // Auto-generate summary if enabled in settings
+              const settings = loadSettings();
+              if (settings.autoSummary !== false) {
+                generateSummary();
+              }
               triggerNextLectureTransition();
             }
           }
@@ -152,7 +175,9 @@
       const activeBadge = document.querySelector('.video-meta-tags span:first-of-type');
       if (activeBadge) activeBadge.textContent = subjectLabel;
     } else {
-      document.title = 'StudyFlow | Watch & Notes';
+      if (window.location.pathname.includes('video.html')) {
+        document.title = 'StudyFlow | Watch & Notes';
+      }
       const detailHeader = document.querySelector('.video-details h1');
       if (detailHeader) detailHeader.textContent = 'Select a lecture to start watching';
       const detailMeta = document.getElementById('videoMetaLine');
@@ -189,7 +214,7 @@
       videoWrapper.innerHTML = `
         <div class="youtube-player-shell">
           <button class="youtube-poster-button" type="button" aria-label="Play ${title}">
-            <img src="https://img.youtube.com/vi/${videoId}/hqdefault.jpg" alt="${title}" onerror="this.src='assets/images/profile.png'">
+            <img src="https://img.youtube.com/vi/${videoId}/hqdefault.jpg" alt="${title}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\'><rect width=\'100%\' height=\'100%\' fill=\'%231f2937\'/><text x=\'50%\' y=\'50%\' fill=\'%239ca3af\' font-family=\'sans-serif\' font-size=\'14\' text-anchor=\'middle\' dy=\'.3em\'>No Thumbnail</text></svg>'">
             <span class="youtube-play-button"><i data-lucide="play" fill="currentColor"></i></span>
             ${resumeLabel ? `<span class="youtube-resume-badge">Resume ${resumeLabel}</span>` : ''}
           </button>
@@ -290,11 +315,7 @@
   const aiModal = document.getElementById('aiModal');
   const aiModalBody = document.getElementById('aiModalBody');
   const closeAiModal = document.getElementById('closeAiModal');
-  // BUG FIX #7: video.html uses id="focus-btn" not "focusBtn"
-  const focusBtn = document.getElementById('focusBtn') || document.getElementById('focus-btn');
-  const bookmarksBtn = document.getElementById('bookmarksBtn');
-  const speedSelect = document.getElementById('speedSelect');
-  const subjectSelect = document.getElementById('subjectSelect');
+    const bookmarksBtn = document.getElementById('bookmarksBtn');  const subjectSelect = document.getElementById('subjectSelect');
 
   function getActiveVideoId() {
     return activeLecture
@@ -303,16 +324,6 @@
   }
   const SUBJECTS_KEY = 'studyflow:subjects';
   const CURRENT_SUBJECT_KEY = 'studyflow:currentSubject';
-
-  function defaultSubjects(){
-    return [
-      { id: 'physics', name: 'Physics' },
-      { id: 'maths', name: 'Maths' },
-      { id: 'chemistry', name: 'Chemistry' },
-      { id: 'programming', name: 'Programming' }
-    ];
-  }
-
   let serverAvailable = false;
 
   async function checkServer(){
@@ -358,11 +369,7 @@
   }
   async function saveSubjects(list){
     localStorage.setItem(SUBJECTS_KEY, JSON.stringify(list));
-    if(serverAvailable){
-      // naive sync: ensure subjects exist on server
-      for(const s of list){ await fetch('/api/subjects',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:s.id,name:s.name})}) }
-      return;
-    }
+    // M4: Removed naive sync loop that spammed POST /api/subjects
   }
   function getCurrentSubjectId(){ return localStorage.getItem(CURRENT_SUBJECT_KEY) || null }
   function setCurrentSubjectId(id){ localStorage.setItem(CURRENT_SUBJECT_KEY, id); }
@@ -414,6 +421,26 @@
   }
   function saveSettings(settings) {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  }
+
+  // ── Theme Application ──
+  function applyTheme(themeValue) {
+    const theme = themeValue || loadSettings().theme || 'dark';
+    document.body.classList.remove('theme-light');
+    if (theme === 'light') {
+      document.body.classList.add('theme-light');
+    } else if (theme === 'system') {
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        document.body.classList.add('theme-light');
+      }
+    }
+  }
+
+  // ── Playback Speed Application ──
+  function getDefaultPlaybackSpeed() {
+    const s = loadSettings().playbackSpeed;
+    const rate = parseFloat(s);
+    return Number.isFinite(rate) && rate > 0 ? rate : 1;
   }
   function saveSetting(key, value) {
     const settings = loadSettings();
@@ -972,7 +999,7 @@
     for (let i = 0; i < subs.length; i++) {
       const s = subs[i];
       const col = subjectColor(i);
-      const lecs = await loadLectures(s.id);
+      const lecs = readJson('studyflow:lectures:' + s.id, []);
       const isActive = s.id === _activeSubjectId;
       const emoji = localStorage.getItem(`studyflow:emoji:${s.id}`) || '\uD83D\uDCDA';
 
@@ -1111,7 +1138,7 @@
   function addNote(){
     return (async ()=>{
       const text = noteText ? noteText.value.trim() : '';
-      if(!text) return alert('Please write a note first!');
+      if(!text) return showToast('Please write a note first!', 'error');
       const sid = getCurrentSubjectId();
       const payload = { videoId: getActiveVideoId(), time: Math.floor(getCurrentPlaybackTime()), text };
       const note = { id: Date.now(), time: payload.time, text };
@@ -1146,9 +1173,8 @@
     createSubjectBtn.addEventListener('click', async () => {
       const name = newSubjectName.value.trim();
       if (!name) { newSubjectName.focus(); return; }
-      const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const id = 'subj_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
       const subs = await loadSubjects();
-      if (subs.find(s => s.id === id)) { alert('A subject with that name already exists!'); return; }
 
       if (serverAvailable) {
         await fetch('/api/subjects', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, name }) });
@@ -1201,16 +1227,11 @@
       }
       b.push(obj);
       await saveBookmarks(b);
-      alert('Bookmarked at ' + formatTime(t));
+      showToast('Bookmarked at ' + formatTime(t));
     })();
   }
 
   const LECTURES_KEY = 'studyflow:lectures:';
-
-  function defaultLectures(subjectId) {
-    return [];
-  }
-
   function loadLocalLectures(subjectId) {
     if (!subjectId) return [];
     try {
@@ -1245,15 +1266,7 @@
     }
 
     if (localLectures.length > 0) return localLectures;
-    try {
-      const defaults = defaultLectures(subjectId);
-      if (defaults.length > 0) {
-        localStorage.setItem(LECTURES_KEY + subjectId, JSON.stringify(defaults));
-      }
-      return defaults.map(normalizeLecture);
-    } catch(e) {
-      return defaultLectures(subjectId).map(normalizeLecture);
-    }
+    return [];
   }
 
   async function saveLectures(subjectId, lectures) {
@@ -1280,6 +1293,10 @@
     if (!listEl) return;
 
     const sid = _activeSubjectId || getCurrentSubjectId();
+    const subs = await loadSubjects();
+    const activeSub = subs.find(x => x.id === sid);
+    const sName = activeSub ? activeSub.name : 'StudyFlow';
+
     const lectures = await loadLectures(sid);
     listEl.innerHTML = '';
 
@@ -1296,6 +1313,7 @@
       // Store IDs as data attributes — no closures, survives DOM replacement
       row.dataset.lectureId = l.id;
       row.dataset.lectureSid = sid;
+      row.dataset.lectureSubjectName = sName;
       row.dataset.lectureYtid = l.youtubeId || '';
       row.dataset.lectureTitle = l.title;
       row.dataset.lectureDuration = l.duration;
@@ -1324,6 +1342,7 @@
 
       const action = e.target.closest('[data-action]')?.dataset.action;
       const lSid   = row.dataset.lectureSid;
+      const lSName = row.dataset.lectureSubjectName;
       const lId    = row.dataset.lectureId;
       const lTitle = row.dataset.lectureTitle;
       const lYtid  = row.dataset.lectureYtid;
@@ -1331,7 +1350,7 @@
 
       if (action === 'watch') {
         localStorage.setItem('studyflow:activeLecture', JSON.stringify({
-          subjectId: lSid, id: lId, title: lTitle, youtubeId: lYtid, duration: lDur
+          subjectId: lSid, subjectName: lSName, id: lId, title: lTitle, youtubeId: lYtid, duration: lDur
         }));
         setCurrentSubjectId(lSid);
         window.location.href = 'video.html';
@@ -1393,7 +1412,7 @@
 
   // Reusable YouTube import logic
   async function handlePlaylistImport(url, sid, activeSubName, btnElement, statusElement, inputElement, onSuccessCallback) {
-    if (!url) return alert('Please enter a YouTube playlist or video URL!');
+    if (!url) return showToast('Please enter a YouTube playlist or video URL!', 'error');
 
     const youtubeImport = extractYouTubeImport(url);
     if (!youtubeImport) {
@@ -1641,7 +1660,7 @@ ${task}`;
     openAiModal(title, loadingHtml());
     if (window.lucide) window.lucide.createIcons();
     const res = await callAI(studySystemPrompt(), studyUserPrompt(ctx, task)) || fallbackStudyAnswer(ctx, task);
-    openAiModal(title, `<div style="line-height:1.6; white-space:pre-wrap;">${escapeHtml(res)}</div>`);
+    openAiModal(title, `<div style="line-height:1.6;">${renderMarkdown(res)}</div>`);
   }
 
   function fallbackStudyAnswer(ctx, task) {
@@ -1795,10 +1814,6 @@ Request saved: ${task}`;
   }));
 
   // focus mode
-  focusBtn && focusBtn.addEventListener('click',()=>{
-    document.body.classList.toggle('focus-mode');
-  });
-
   function renderBookmarksModal(bookmarks) {
     if (!bookmarks.length) {
       openAiModal('Bookmarks', '<div style="color:var(--text-muted);font-size:0.9rem;padding:14px 0;">No bookmarks yet.</div>');
@@ -1843,10 +1858,6 @@ Request saved: ${task}`;
       renderBookmarksModal(updated);
     });
   }
-
-  // playback speed
-  speedSelect && speedSelect.addEventListener('change',e=>{ video.playbackRate = parseFloat(e.target.value.replace('x','')) || 1 });
-
   async function renderSettingsSubjects() {
     const listEl = document.getElementById('settingsSubjectList');
     if (!listEl) return;
@@ -1889,28 +1900,30 @@ Request saved: ${task}`;
     if (profileNameInput && !profileNameInput.dataset.bound) {
       profileNameInput.dataset.bound = '1';
       profileNameInput.value = loadProfile().name || '';
-      profileNameInput.addEventListener('input', (e) => {
+      profileNameInput.addEventListener('blur', (e) => {
         const p = loadProfile();
         p.name = e.target.value.trim() || 'Student';
         saveProfile(p);
-      });
-      profileNameInput.addEventListener('blur', () => {
-        const p = loadProfile();
-        profileNameInput.value = p.name || 'Student';
+        profileNameInput.value = p.name;
       });
     }
 
     const settings = loadSettings();
     const controls = [
       ['themePreference', 'theme'],
-      ['playbackSpeedPreference', 'playbackSpeed']
+      ['playbackSpeedPreference', 'playbackSpeed'],
+      ['streakTargetPreference', 'streakTarget']
     ];
     controls.forEach(([id, key]) => {
       const el = document.getElementById(id);
       if (!el || el.dataset.bound) return;
       el.dataset.bound = '1';
       if (settings[key]) el.value = settings[key];
-      el.addEventListener('change', () => saveSetting(key, el.value));
+      el.addEventListener('change', () => {
+        saveSetting(key, el.value);
+        // Live-apply theme changes
+        if (key === 'theme') applyTheme(el.value);
+      });
     });
 
     const toggles = [
@@ -1924,6 +1937,44 @@ Request saved: ${task}`;
       if (typeof settings[key] === 'boolean') el.checked = settings[key];
       el.addEventListener('change', () => saveSetting(key, el.checked));
     });
+
+    // ── H3: Reset Data button ──
+    const resetBtn = document.getElementById('resetDataBtn');
+    if (resetBtn && !resetBtn.dataset.bound) {
+      resetBtn.dataset.bound = '1';
+      resetBtn.addEventListener('click', async () => {
+        if (!(await showConfirm('This will permanently delete ALL your study data — subjects, lectures, notes, bookmarks, streaks, and settings. This cannot be undone. Continue?'))) return;
+        // Clear all studyflow localStorage keys
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('studyflow:')) keysToRemove.push(key);
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        // Clear server data
+        if (serverAvailable) {
+          try { await fetch('/api/reset', { method: 'DELETE' }); } catch (e) { console.warn('Server reset failed', e); }
+        }
+        window.location.reload();
+      });
+    }
+
+    // ── H6: Settings search ──
+    const settingsSearchInput = document.getElementById('settingsSearch');
+    if (settingsSearchInput && !settingsSearchInput.dataset.bound) {
+      settingsSearchInput.dataset.bound = '1';
+      settingsSearchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim().toLowerCase();
+        document.querySelectorAll('.setting-section').forEach(section => {
+          if (!query) {
+            section.style.display = '';
+            return;
+          }
+          const text = section.textContent.toLowerCase();
+          section.style.display = text.includes(query) ? '' : 'none';
+        });
+      });
+    }
   }
 
   // Settings Add Subject Handler
@@ -1935,10 +1986,8 @@ Request saved: ${task}`;
       const name = settingsNewSubjectName.value.trim();
       if (!name) return;
       
-      const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-      if (!id) { alert('Please use a subject name with at least one letter or number.'); return; }
+      const id = 'subj_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
       const subs = await loadSubjects();
-      if (subs.find(s => s.id === id)) { alert('A subject with that name already exists!'); return; }
 
       settingsAddSubjectBtn.disabled = true;
       try {
@@ -1956,7 +2005,7 @@ Request saved: ${task}`;
         await renderSubjectSelect();
         await renderSubjectsList();
       } catch (e) {
-        alert(e.message || 'Could not save subject. Please try again.');
+        showToast(e.message || 'Could not save subject. Please try again.', 'error');
       } finally {
         settingsAddSubjectBtn.disabled = false;
       }
@@ -2106,7 +2155,7 @@ Request saved: ${task}`;
           
           card.innerHTML = `
             <div class="thumbnail">
-              <img src="https://img.youtube.com/vi/${l.youtubeId}/mqdefault.jpg" onerror="this.src='assets/images/profile.png'" alt="${l.title}">
+              <img src="https://img.youtube.com/vi/${l.youtubeId}/mqdefault.jpg" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\'><rect width=\'100%\' height=\'100%\' fill=\'%231f2937\'/><text x=\'50%\' y=\'50%\' fill=\'%239ca3af\' font-family=\'sans-serif\' font-size=\'14\' text-anchor=\'middle\' dy=\'.3em\'>No Thumbnail</text></svg>'" alt="${l.title}">
               <div class="play-overlay"><div class="play-icon"><i data-lucide="play" fill="currentColor"></i></div></div>
             </div>
             <div class="video-info">
@@ -2127,6 +2176,7 @@ Request saved: ${task}`;
   // init
   await checkServer();
   await hydrateSettingsFromServer();
+  applyTheme(); // Apply saved theme immediately
   initSettingsControls();
   const subjects = await loadSubjects();
   await reconcileWatchLectureState(subjects);
@@ -2142,6 +2192,23 @@ Request saved: ${task}`;
   await renderSidebarPlaylist();
   await renderDashboard();
   await renderSettingsSubjects();
+
+  // ── H6: Dashboard search ──
+  const dashboardSearchInput = document.getElementById('dashboardSearch');
+  if (dashboardSearchInput) {
+    dashboardSearchInput.addEventListener('input', (e) => {
+      const query = e.target.value.trim().toLowerCase();
+      const cards = document.querySelectorAll('#dashboardContinueWatching .video-card');
+      cards.forEach(card => {
+        if (!query) {
+          card.style.display = '';
+          return;
+        }
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? '' : 'none';
+      });
+    });
+  }
 
   // Wire up tabs
   const tabNotesBtn = document.getElementById('tabNotesBtn');

@@ -7,7 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@0.370.0" integrity="sha384-VEi8DDv/QgF/OOj+VH+43q2N6woOzpR9uMG/xjTRfdQ9kcX7D0JJQKrVZ7uRJCyH" crossorigin="anonymous" defer></script>
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
   <link rel="stylesheet" href="assets/css/styles.css">
 
   <style>
@@ -579,8 +580,7 @@
       <nav class="nav-menu">
         <a href="index.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
         <a href="video.html" class="nav-item"><i data-lucide="video"></i><span>Watch &amp; Notes</span></a>
-        <a href="#" class="nav-item"><i data-lucide="layers"></i><span>Flashcards</span></a>
-        <a href="#" class="nav-item"><i data-lucide="refresh-cw"></i><span>Revision</span></a>
+        <a href="subject.html" class="nav-item active"><i data-lucide="book-open"></i><span>Subjects</span></a>
         <a href="settings.html" class="nav-item"><i data-lucide="settings"></i><span>Settings</span></a>
       </nav>
       <button class="btn btn-primary" style="margin-top:auto;width:100%;" onclick="document.getElementById('createSubjectModal').classList.add('open')">
@@ -688,6 +688,7 @@
     <nav class="mobile-nav">
       <a href="index.html"><i data-lucide="layout-grid"></i><span>Dashboard</span></a>
       <a href="video.html"><i data-lucide="video"></i><span>Watch</span></a>
+      <a href="subject.html" class="active"><i data-lucide="book-open"></i><span>Subjects</span></a>
       <a href="settings.html"><i data-lucide="settings"></i><span>Settings</span></a>
     </nav>
   </div>
@@ -718,7 +719,7 @@
     <div class="modal-content glass-card" style="width:90%;max-width:500px;padding:28px;position:relative;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
         <h3 id="aiModalTitle">Assistant</h3>
-        <button class="btn-icon" id="closeAiModal" style="width:28px;height:28px;"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+        <button class="btn-icon" id="closeAiModal" aria-label="Close modal" style="width:28px;height:28px;"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
       </div>
       <div id="aiModalBody" style="color:#d1d5db;font-size:1rem;line-height:1.6;max-height:350px;overflow-y:auto;"></div>
     </div>

@@ -11,9 +11,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@0.370.0" integrity="sha384-VEi8DDv/QgF/OOj+VH+43q2N6woOzpR9uMG/xjTRfdQ9kcX7D0JJQKrVZ7uRJCyH" crossorigin="anonymous" defer></script>
   
   <!-- Styles -->
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
   <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
@@ -39,13 +40,9 @@
           <i data-lucide="video"></i>
           <span>Watch & Notes</span>
         </a>
-        <a href="#" class="nav-item">
-          <i data-lucide="layers"></i>
-          <span>Flashcards</span>
-        </a>
-        <a href="#" class="nav-item">
-          <i data-lucide="refresh-cw"></i>
-          <span>Revision</span>
+        <a href="subject.html" class="nav-item">
+          <i data-lucide="book-open"></i>
+          <span>Subjects</span>
         </a>
         <a href="settings.html" class="nav-item">
           <i data-lucide="settings"></i>
@@ -122,7 +119,7 @@
             <div class="notes-header" style="flex-shrink: 0; padding: 12px 16px 8px;">
               <h3><i data-lucide="edit-3" style="color: var(--accent-blue); width: 16px; height: 16px;"></i> Live Notes</h3>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <input id="searchNotes" type="text" placeholder="Search notes..." style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 6px 10px; border-radius: var(--radius-md); color: white; font-size: 0.8rem; width: 120px;">
+                <input id="searchNotes" type="text" placeholder="Search notes..." aria-label="Search notes" aria-label="Search notes" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 6px 10px; border-radius: var(--radius-md); color: white; font-size: 0.8rem; width: 120px;">
               </div>
             </div>
             
@@ -131,12 +128,12 @@
             </div>
             
             <div class="notes-editor" style="flex-shrink: 0; padding: 16px; border-top: 1px solid var(--glass-border);">
-              <textarea id="noteText" placeholder="Take a note... (Markdown supported)" rows="3"></textarea>
+              <textarea id="noteText" placeholder="Take a note... (Markdown supported)" aria-label="Take a note" rows="3" maxlength="2000"></textarea>
               <div class="editor-actions">
                 <div class="editor-tools">
                   <button class="floating-note"><i data-lucide="clock" style="width: 16px; height: 16px;"></i> Time</button>
-                  <button onclick="document.getElementById('noteText').value += '**bold**'"><i data-lucide="bold" style="width: 16px; height: 16px;"></i></button>
-                  <button onclick="document.getElementById('noteText').value += '*italic*'"><i data-lucide="italic" style="width: 16px; height: 16px;"></i></button>
+                  <button aria-label="Make text bold" onclick="document.getElementById('noteText').value += '**bold**'"><i data-lucide="bold" style="width: 16px; height: 16px;"></i></button>
+                  <button aria-label="Make text italic" onclick="document.getElementById('noteText').value += '*italic*'"><i data-lucide="italic" style="width: 16px; height: 16px;"></i></button>
                 </div>
                 <button id="addNoteBtn" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.85rem;">Save Note</button>
               </div>
@@ -165,7 +162,7 @@
         <i data-lucide="sparkles" style="color: var(--accent-purple); width: 18px; height: 18px;"></i> 
         Study AI Assistant
       </h3>
-      <button class="btn-icon" id="close-ai" style="width: 24px; height: 24px;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+      <button class="btn-icon" id="close-ai" aria-label="Close AI" style="width: 24px; height: 24px;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
     </div>
     
     <div id="aiMessages" style="padding: 16px; height: 270px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
@@ -186,8 +183,8 @@
     
     <div style="padding: 12px; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.2);">
       <div style="position: relative;">
-        <input type="text" id="aiChatInput" placeholder="Ask anything about the video..." style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 10px 40px 10px 12px; border-radius: 20px; color: white; font-size: 0.9rem;">
-        <button id="aiChatSend" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; color: var(--accent-blue); cursor: pointer;"><i data-lucide="send" style="width: 16px; height: 16px;"></i></button>
+        <input type="text" id="aiChatInput" placeholder="Ask anything about the video..." aria-label="Ask anything about the video" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 10px 40px 10px 12px; border-radius: 20px; color: white; font-size: 0.9rem;">
+        <button id="aiChatSend" aria-label="Send AI message" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; color: var(--accent-blue); cursor: pointer;"><i data-lucide="send" style="width: 16px; height: 16px;"></i></button>
       </div>
     </div>
 
@@ -197,6 +194,7 @@
   <nav class="mobile-nav">
     <a href="index.html"><i data-lucide="layout-grid"></i><span>Dashboard</span></a>
     <a href="video.html" class="active"><i data-lucide="video"></i><span>Watch</span></a>
+    <a href="subject.html"><i data-lucide="book-open"></i><span>Subjects</span></a>
     <a href="settings.html"><i data-lucide="settings"></i><span>Settings</span></a>
   </nav>
 
@@ -206,7 +204,7 @@
     <div class="modal-content glass-card" style="width: 90%; max-width: 500px; padding: 28px; position: relative;">
       <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 12px;">
         <h3 id="aiModalTitle">AI Assistant</h3>
-        <button class="btn-icon" id="closeAiModal" style="width: 28px; height: 28px;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+        <button class="btn-icon" id="closeAiModal" aria-label="Close modal" style="width: 28px; height: 28px;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
       </div>
       <div class="modal-body" id="aiModalBody" style="color: #d1d5db; font-size: 1rem; line-height: 1.6; max-height: 350px; overflow-y: auto;">
         <!-- Content will be injected by app.js -->

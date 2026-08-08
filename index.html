@@ -11,9 +11,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@0.370.0" integrity="sha384-VEi8DDv/QgF/OOj+VH+43q2N6woOzpR9uMG/xjTRfdQ9kcX7D0JJQKrVZ7uRJCyH" crossorigin="anonymous" defer></script>
   
   <!-- Styles -->
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
   <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
@@ -39,13 +40,9 @@
           <i data-lucide="video"></i>
           <span>Watch & Notes</span>
         </a>
-        <a href="#" class="nav-item">
-          <i data-lucide="layers"></i>
-          <span>Flashcards</span>
-        </a>
-        <a href="#" class="nav-item">
-          <i data-lucide="refresh-cw"></i>
-          <span>Revision</span>
+        <a href="subject.html" class="nav-item">
+          <i data-lucide="book-open"></i>
+          <span>Subjects</span>
         </a>
         <a href="settings.html" class="nav-item">
           <i data-lucide="settings"></i>
@@ -70,7 +67,7 @@
       <header class="topbar">
         <div class="search-bar">
           <i data-lucide="search"></i>
-          <input type="text" placeholder="Search videos, notes, subjects, or ask AI...">
+          <input type="text" id="dashboardSearch" placeholder="Search videos, notes, subjects, or ask AI...">
         </div>
       </header>
       
@@ -132,7 +129,7 @@
       <div class="glass-card widget">
         <div class="widget-header">
           <h3 class="widget-title">Recent Notes</h3>
-          <button class="btn-icon" style="width: 28px; height: 28px;"><i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i></button>
+          <button class="btn-icon" aria-label="View recent notes" style="width: 28px; height: 28px;"><i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i></button>
         </div>
         <div id="dashboardRecentNotes">
           <div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 20px 0;">No notes found.</div>
@@ -145,6 +142,7 @@
     <nav class="mobile-nav">
       <a href="index.html" class="active"><i data-lucide="layout-grid"></i><span>Dashboard</span></a>
       <a href="video.html"><i data-lucide="video"></i><span>Watch</span></a>
+      <a href="subject.html"><i data-lucide="book-open"></i><span>Subjects</span></a>
       <a href="settings.html"><i data-lucide="settings"></i><span>Settings</span></a>
     </nav>
   </div>

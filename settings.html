@@ -11,9 +11,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@0.370.0" integrity="sha384-VEi8DDv/QgF/OOj+VH+43q2N6woOzpR9uMG/xjTRfdQ9kcX7D0JJQKrVZ7uRJCyH" crossorigin="anonymous" defer></script>
   
   <!-- Styles -->
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
   <link rel="stylesheet" href="assets/css/styles.css">
   
   <style>
@@ -159,13 +160,9 @@
           <i data-lucide="video"></i>
           <span>Watch & Notes</span>
         </a>
-        <a href="#" class="nav-item">
-          <i data-lucide="layers"></i>
-          <span>Flashcards</span>
-        </a>
-        <a href="#" class="nav-item">
-          <i data-lucide="refresh-cw"></i>
-          <span>Revision</span>
+        <a href="subject.html" class="nav-item">
+          <i data-lucide="book-open"></i>
+          <span>Subjects</span>
         </a>
         <a href="settings.html" class="nav-item active">
           <i data-lucide="settings"></i>
@@ -190,7 +187,7 @@
       <header class="topbar">
         <div class="search-bar">
           <i data-lucide="search"></i>
-          <input type="text" placeholder="Search settings...">
+          <input type="text" id="settingsSearch" placeholder="Search settings...">
         </div>
       </header>
       
@@ -230,9 +227,9 @@
               </div>
               <div class="setting-control">
                 <select id="themePreference">
-                  <option>Dark Mode (Recommended)</option>
-                  <option>Light Mode</option>
-                  <option>System Default</option>
+                  <option value="dark">Dark Mode (Recommended)</option>
+                  <option value="light">Light Mode</option>
+                  <option value="system">System Default</option>
                 </select>
               </div>
             </div>
@@ -244,11 +241,11 @@
               </div>
               <div class="setting-control">
                 <select id="playbackSpeedPreference">
-                  <option>1.0x (Normal)</option>
-                  <option>1.25x</option>
-                  <option>1.5x</option>
-                  <option>1.75x</option>
-                  <option>2.0x</option>
+                  <option value="1">1.0x (Normal)</option>
+                  <option value="1.25">1.25x</option>
+                  <option value="1.5">1.5x</option>
+                  <option value="1.75">1.75x</option>
+                  <option value="2">2.0x</option>
                 </select>
               </div>
             </div>
@@ -318,10 +315,10 @@
                 <span>Your daily study streak milestone reminder.</span>
               </div>
               <div class="setting-control">
-                <select>
-                  <option>7 Days</option>
-                  <option>14 Days</option>
-                  <option>30 Days (Pro)</option>
+                <select id="streakTargetPreference">
+                  <option value="7">7 Days</option>
+                  <option value="14">14 Days</option>
+                  <option value="30">30 Days (Pro)</option>
                 </select>
               </div>
             </div>
@@ -332,7 +329,7 @@
                 <span>Delete all local study streaks, custom notes, and bookmarks. This action is irreversible.</span>
               </div>
               <div class="setting-control">
-                <button class="btn" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">Reset Data</button>
+                <button id="resetDataBtn" class="btn" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">Reset Data</button>
               </div>
             </div>
           </div>
@@ -358,6 +355,7 @@
     <nav class="mobile-nav">
       <a href="index.html"><i data-lucide="layout-grid"></i><span>Dashboard</span></a>
       <a href="video.html"><i data-lucide="video"></i><span>Watch</span></a>
+      <a href="subject.html"><i data-lucide="book-open"></i><span>Subjects</span></a>
       <a href="settings.html" class="active"><i data-lucide="settings"></i><span>Settings</span></a>
     </nav>
   </div>

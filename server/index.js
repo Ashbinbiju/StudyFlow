@@ -25,6 +25,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Security (M15): Prevent serving backend source code
+app.use((req, res, next) => {
+  if (req.path.startsWith('/server/')) return res.status(403).json({ error: 'Forbidden' });
+  next();
+});
+
 // Serve static frontend
 app.use(express.static(path.join(__dirname, '..')));
 
@@ -129,26 +135,30 @@ app.get('/api/youtube/playlist', async (req, res) => {
 
   try {
     let lectures = [];
-    const response = await fetch(`https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(playlistId)}`, {
+
+    // 1. Try full page scrape first — returns ALL videos with real durations
+    const pageResponse = await fetch(`https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`, {
       headers: {
-        'User-Agent': 'StudyFlow/1.0 (+https://rcstudyflow.vercel.app)'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9'
       }
     });
-    const feedText = await response.text();
-    if (response.ok) {
-      lectures = parseYouTubeFeed(feedText);
+    const pageHtml = await pageResponse.text();
+    if (pageResponse.ok) {
+      lectures = parseYouTubePlaylistPage(pageHtml);
     }
 
+    // 2. Fall back to RSS feed only if page scrape returned nothing
+    //    NOTE: RSS is hard-capped at 15 entries and has no duration data
     if (!lectures.length) {
-      const pageResponse = await fetch(`https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`, {
+      const response = await fetch(`https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(playlistId)}`, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-          'Accept-Language': 'en-US,en;q=0.9'
+          'User-Agent': 'StudyFlow/1.0 (+https://rcstudyflow.vercel.app)'
         }
       });
-      const pageHtml = await pageResponse.text();
-      if (pageResponse.ok) {
-        lectures = parseYouTubePlaylistPage(pageHtml);
+      const feedText = await response.text();
+      if (response.ok) {
+        lectures = parseYouTubeFeed(feedText);
       }
     }
 
@@ -206,6 +216,11 @@ async function initDb() {
     db = new SQL.Database();
   }
 
+  const check = db.exec("PRAGMA table_info(notes)");
+  if (check.length > 0 && check[0].values.some(col => col[1] === 'id' && col[2] === 'INTEGER')) {
+    db.run("DROP TABLE IF EXISTS notes; DROP TABLE IF EXISTS bookmarks;");
+  }
+
   // Create tables
   db.run(`
     CREATE TABLE IF NOT EXISTS subjects (
@@ -222,14 +237,14 @@ async function initDb() {
       PRIMARY KEY (subjectId, id)
     );
     CREATE TABLE IF NOT EXISTS notes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id TEXT PRIMARY KEY,
       subjectId TEXT NOT NULL,
       videoId TEXT NOT NULL,
       time INTEGER NOT NULL,
       text TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS bookmarks (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id TEXT PRIMARY KEY,
       subjectId TEXT NOT NULL,
       videoId TEXT NOT NULL,
       time INTEGER NOT NULL
@@ -243,11 +258,15 @@ async function initDb() {
   saveDb();
 }
 
+let dbSaveTimeout = null;
 function saveDb() {
   if (!db) return;
-  const data = db.export();
-  const buffer = Buffer.from(data);
-  fs.writeFileSync(dbFile, buffer);
+  if (dbSaveTimeout) clearTimeout(dbSaveTimeout);
+  dbSaveTimeout = setTimeout(() => {
+    const data = db.export();
+    const buffer = Buffer.from(data);
+    fs.writeFileSync(dbFile, buffer);
+  }, 1000);
 }
 
 app.use(async (req, res, next) => {
@@ -386,6 +405,22 @@ app.put('/api/settings/:key', (req, res) => {
   res.json({ key, value: req.body.value });
 });
 
+// Reset all data
+app.delete('/api/reset', (req, res) => {
+  try {
+    db.run('DELETE FROM subjects');
+    db.run('DELETE FROM lectures');
+    db.run('DELETE FROM notes');
+    db.run('DELETE FROM bookmarks');
+    db.run('DELETE FROM settings');
+    saveDb();
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Reset failed:', error);
+    res.status(500).json({ error: 'reset failed' });
+  }
+});
+
 // Notes
 app.get('/api/subjects/:id/notes', (req, res) => {
   const { id } = req.params;
@@ -401,8 +436,10 @@ app.post('/api/subjects/:id/notes', (req, res) => {
   const { id } = req.params;
   const { videoId, time, text } = req.body;
   if (typeof time !== 'number' || !text) return res.status(400).json({ error: 'time and text required' });
-  runQuery('INSERT INTO notes (subjectId, videoId, time, text) VALUES (?, ?, ?, ?)', [id, videoId || 'video1', time, text]);
-  const row = getOne('SELECT id, subjectId, videoId, time, text FROM notes ORDER BY id DESC LIMIT 1');
+  if (text.length > 2000) return res.status(400).json({ error: 'note text exceeds 2000 characters' });
+  const newId = Date.now().toString();
+  runQuery('INSERT INTO notes (id, subjectId, videoId, time, text) VALUES (?, ?, ?, ?, ?)', [newId, id, videoId || 'video1', time, text]);
+  const row = getOne('SELECT id, subjectId, videoId, time, text FROM notes WHERE id = ?', [newId]);
   res.json(row);
 });
 
@@ -426,8 +463,9 @@ app.post('/api/subjects/:id/bookmarks', (req, res) => {
   const { id } = req.params;
   const { videoId, time } = req.body;
   if (typeof time !== 'number') return res.status(400).json({ error: 'time required' });
-  runQuery('INSERT INTO bookmarks (subjectId, videoId, time) VALUES (?, ?, ?)', [id, videoId || 'video1', time]);
-  const row = getOne('SELECT id, subjectId, videoId, time FROM bookmarks ORDER BY id DESC LIMIT 1');
+  const newId = Date.now().toString();
+  runQuery('INSERT INTO bookmarks (id, subjectId, videoId, time) VALUES (?, ?, ?, ?)', [newId, id, videoId || 'video1', time]);
+  const row = getOne('SELECT id, subjectId, videoId, time FROM bookmarks WHERE id = ?', [newId]);
   res.json(row);
 });
 
@@ -436,17 +474,7 @@ app.delete('/api/bookmarks/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-// AI mock endpoints
-app.post('/api/ai/summary', (req, res) => {
-  const { subjectId, videoId } = req.body;
-  const notesRows = getAll(
-    'SELECT time, text FROM notes WHERE subjectId = ? AND videoId = ? ORDER BY time',
-    [subjectId, videoId || 'video1']
-  );
-  if (!notesRows.length) return res.json({ summary: 'No notes available.' });
-  const lines = notesRows.slice(0, 10).map(n => `- [${new Date(n.time * 1000).toISOString().substr(14, 5)}] ${n.text}`);
-  res.json({ summary: lines.join('\n') });
-});
+// AI endpoints
 
 app.post('/api/ai/chat', async (req, res) => {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -479,6 +507,12 @@ app.post('/api/ai/chat', async (req, res) => {
     console.error('AI proxy error:', error);
     res.status(502).json({ error: { message: 'AI service unavailable' } });
   }
+});
+
+// M13: Global JSON Error Handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled Server Error:', err);
+  res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
 });
 
 const PORT = process.env.PORT || 3000;

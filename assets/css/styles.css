@@ -2046,3 +2046,172 @@ input:checked+.slider:before {
     height: 18px;
   }
 }
+
+/* ══════════════════════════════════════════
+ * Light Theme Override
+ * Applied via body.theme-light
+ * ══════════════════════════════════════════ */
+body.theme-light {
+  --bg-color: #f5f7fa;
+  --bg-secondary: #edf0f5;
+  --text-main: #1a1a2e;
+  --text-muted: #6b7280;
+  --text-dark: #1f2937;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg-hover: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-border-light: rgba(0, 0, 0, 0.12);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+  background-color: var(--bg-color);
+  background-image:
+    radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.06) 0%, transparent 50%);
+  color: var(--text-main);
+}
+
+body.theme-light .sidebar {
+  background: rgba(255, 255, 255, 0.85);
+  border-right-color: rgba(0, 0, 0, 0.08);
+}
+
+body.theme-light .nav-item {
+  color: #4b5563;
+}
+
+body.theme-light .nav-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #1a1a2e;
+}
+
+body.theme-light .nav-item.active {
+  background: rgba(59, 130, 246, 0.08);
+  color: #1e40af;
+}
+
+body.theme-light .nav-item.active i {
+  color: #2563eb;
+}
+
+body.theme-light .topbar {
+  background: rgba(245, 247, 250, 0.9);
+}
+
+body.theme-light .search-bar input {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #1a1a2e;
+}
+
+body.theme-light .search-bar input::placeholder {
+  color: #9ca3af;
+}
+
+body.theme-light .right-sidebar {
+  background: rgba(255, 255, 255, 0.6);
+  border-left-color: rgba(0, 0, 0, 0.08);
+}
+
+body.theme-light .glass-card {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.theme-light .glass-card:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+body.theme-light h1,
+body.theme-light h2,
+body.theme-light h3,
+body.theme-light h4,
+body.theme-light h5,
+body.theme-light h6 {
+  color: #1a1a2e;
+}
+
+body.theme-light .brand-name {
+  color: #1a1a2e;
+}
+
+body.theme-light .streak-info p {
+  color: #1a1a2e;
+}
+
+body.theme-light .sidebar-footer {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.theme-light .mobile-nav {
+  background: rgba(255, 255, 255, 0.95);
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+body.theme-light .mobile-nav a {
+  color: #6b7280;
+}
+
+body.theme-light .mobile-nav a.active {
+  color: #2563eb;
+}
+
+body.theme-light .setting-control select {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #1a1a2e;
+}
+
+body.theme-light .setting-info label {
+  color: #1a1a2e;
+}
+
+body.theme-light .notes-panel {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* M9: Toast Notifications */
+.studyflow-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #1a1b26;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 12px 18px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  font-size: 0.9rem;
+  z-index: 10000;
+  transform: translateY(20px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.studyflow-toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+.studyflow-toast.toast-error {
+  border-left: 4px solid #ef4444;
+}
+.studyflow-toast.toast-info {
+  border-left: 4px solid #3b82f6;
+}
+.studyflow-toast i {
+  width: 18px;
+  height: 18px;
+}
+
+/* M3: Minimum tap targets for mobile accessibility */
+@media (max-width: 768px) {
+  .btn-icon, .floating-note, .bookmark-jump-btn, .bookmark-delete-btn, .lecture-watch-btn, .lecture-delete-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+  }
+}
