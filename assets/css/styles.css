@@ -1322,8 +1322,8 @@ body:not(.dashboard-ready) #dashboardContinueWatching .video-card {
 }
 
 select option {
-  background-color: #0b0c10 !important;
-  color: #ffffff !important;
+  background-color: var(--bg-color) !important;
+  color: var(--text-main) !important;
   padding: 8px;
 }
 
@@ -2164,6 +2164,26 @@ body.theme-light .setting-control select {
 
 body.theme-light .setting-info label {
   color: #1a1a2e;
+}
+
+body.theme-light select option {
+  background-color: #ffffff !important;
+  color: #1a1a2e !important;
+}
+
+body.theme-light .subject-select-wrap {
+  background-color: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.02);
+}
+
+body.theme-light .subject-select-wrap:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.18);
+}
+
+body.theme-light .subject-select {
+  color: #1a1a2e !important;
 }
 
 body.theme-light .notes-panel {
